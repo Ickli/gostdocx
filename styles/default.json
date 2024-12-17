@@ -1,0 +1,15 @@
+{
+    "paragraph": {
+        "is_paragraph": true,
+        "first_line_indent": 1.5,
+        "left_indent": 1.5,
+        "line_spacing": 1.5
+    },
+    "list": {
+        "is_paragraph": true,
+        "first_line_indent": 2.5,
+        "left_indent": 2.5,
+        "line_spacing": 2.5,
+        "base_style": "List Bullet"
+    }
+}
