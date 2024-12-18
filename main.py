@@ -87,9 +87,13 @@ def process_args() -> (str, str):
     GdocxParsing.INDENT_STRING = ic * il
     
     if inpath is None:
-        raise Exception("No input file is provided")
+        print("ERROR: No input file is provided")
+        prs.print_help()
+        exit()
     if outpath is None:
-        raise Exception("No output file is provided")
+        print("ERROR: No output file is provided")
+        prs.print_help()
+        exit()
 
     GdocxParsing.STRIP_INDENT = args.strip_indent
     return (inpath, outpath)
