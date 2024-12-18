@@ -1,28 +1,24 @@
 import json
 from docx.styles.style import BaseStyle, ParagraphStyle
-from docx.enum.text import WD_LINE_SPACING
+from docx.enum.text import WD_LINE_SPACING, WD_PARAGRAPH_ALIGNMENT
 from docx.enum.style import WD_STYLE_TYPE
-from docx.shared import Pt
+from docx.shared import Pt, Inches, Cm
 from docx import Document
 
 # names for fields of json, 
 # these fields do not correlate to any docx.Style attribute
 FIELD_IS_PAR = "is_paragraph"
+FIELD_UNORDERED_LIST_PREFIX = "unordered_list_prefix"
 
-# Properties of this style are not dictated by any json
-# All newly created styles will use these properties if not overriden
-def create_default_par_style(style_name: str, doc: Document) -> ParagraphStyle:
-    style = doc.styles.add_style(style_name, WD_STYLE_TYPE.PARAGRAPH)
-    fmt = style.paragraph_format
-    fmt.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
-    return style
-
+# You can change it
+# Don't forget to add new default styles in set_defaults_if_not_set()
 class Style:
+    UNORDERED_LIST_PREFIX = None
     UNORDERED_LIST = None
     ORDERED_LIST = None
 
     # Names for default styles
-    DNAME_UNORDERED_LIST = "List Bullet"
+    DNAME_UNORDERED_LIST = "list"
     DNAME_ORDERED_LIST = "List Number"
 
 def set_defaults_if_not_set(doc: Document):
@@ -31,14 +27,29 @@ def set_defaults_if_not_set(doc: Document):
     if Style.ORDERED_LIST is None:
         Style.ORDERED_LIST = doc.styles[Style.DNAME_ORDERED_LIST]
 
+# Properties of this style are not dictated by any json
+# All newly created styles will use these properties if not overriden
+def create_default_par_style(style_name: str, doc: Document) -> ParagraphStyle:
+    style = doc.styles.add_style(style_name, WD_STYLE_TYPE.PARAGRAPH)
+    fmt = style.paragraph_format
+    fmt.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+    return style
+
+def use_styles_from_file(filepath: str, doc: Document):
+    file = open(filepath, "r")
+    json_string = file.read()
+    parse_raw_styles(json_string, doc)
 
 def parse_raw_styles(json_string: str, doc: Document):
     raw_styles = json.loads(json_string)
 
     for style_name in raw_styles:
-        raw_style = raw_styles[style_name]
+        if style_name == FIELD_UNORDERED_LIST_PREFIX:
+            Style.UNORDERED_LIST_PREFIX = raw_styles[style_name]
+            continue
         if style_name in doc.styles:
             raise Exception(f"Style {style_name} encountered twice")
+        raw_style = raw_styles[style_name]
         style = parse_raw_style(style_name, raw_style, doc)
 
 def parse_raw_style(style_name: str, json_dict: dict[str, object], doc: Document) -> BaseStyle:
@@ -52,13 +63,18 @@ def parse_raw_style(style_name: str, json_dict: dict[str, object], doc: Document
         value = json_dict[name]
         if name == "font":
             parse_raw_font(style, value)
+        elif name == "base_style":
+            style.base_style = doc.styles[value]
+        elif name == "alignment":
+            style.paragraph_format.alignment = getattr(WD_PARAGRAPH_ALIGNMENT, value)
         elif name.endswith('indent'):
-            setattr(style.paragraph_format, name, Pt(value))
+            setattr(style.paragraph_format, name, Cm(value))
         else:
             setattr(style.paragraph_format, name, value)
 
 def parse_raw_font(style: BaseStyle, font_dict: dict[str, object]):
-    for name, value in font_dict:
+    for name in font_dict:
+        value = font_dict[name]
         if name == "size":
             style.font.size = Pt(value)
         else:

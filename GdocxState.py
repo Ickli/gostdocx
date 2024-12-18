@@ -1,38 +1,51 @@
-from typing import Callable
+from typing import Type, Any
 from docx import Document
 import GdocxHandler
 import GdocxParsing
 import GdocxStyle
 
-default_handlers: dict[str, Callable[['GdocxState', list[str]], object]] = {
-        "unordered-list-item": lambda state, macro_args: GdocxHandler.UnorderedListHandler(state, macro_args),
-        "load-style": lambda state, macro_args: GdocxHandler.LoadStyleHandler(state, macro_args),
-}
+default_handlers: list[Type[Any]] = [
+        GdocxHandler.OrderedListHandler,
+        GdocxHandler.OrderedListItemHandler,
+        GdocxHandler.UnorderedListItemHandler,
+        GdocxHandler.LoadStyleHandler,
+        GdocxHandler.ParStyleHandler,
+]
+
+def get_handler_dict(handlers: list[Type[Any]]):
+    handler_dict = {}
+    for handler in handlers:
+        handler_dict[handler.Name] = handler
+    return handler_dict
 
 # Document passed to ctor must outlive GdocxState
 class GdocxState:
     def __init__(self, 
         doc: Document, 
-        handlers: dict[str, Callable[['GdocxState', list[str]], object]]
+        handlers: list[Type[Any]]
     ):
         self.doc = doc
-        self.cur_paragraph_lines = []
+        self.paragraph_lines = []
         self.current_style = doc.styles['Normal']
-        self.registered_handlers = default_handlers | handlers
+        self.registered_handlers = get_handler_dict(default_handlers + handlers)
         self.reached_macro_end = False
-        GdocxStyle.set_defaults_if_not_set(doc)
+        self.handler = self
+        self.indent = 0
+        self.strip_indent = False
 
     # Returns new handler, if macro is encountered;
     # otherwise, returns None
     def handle_or_get_new_handler(self,
-        line: str, 
-        info: GdocxParsing.LineInfo,
-        handler) -> object | None:
+        line: str
+    ) -> object | None:
+        indent = self.indent if self.strip_indent else 0
 
+        rawline, info = GdocxParsing.parse_line(line, indent)
         if info.type == GdocxParsing.INFO_TYPE_MACRO:
             return self.process_macro_line(line, info)
+        elif info.type != GdocxParsing.INFO_TYPE_COMMENT:
+            self.handler.process_line(line, info)
 
-        handler.process_line(line, info)
         return None
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
@@ -60,24 +73,24 @@ class GdocxState:
             else:
                 new_handler = self.registered_handlers[macro_name](self, args[1:])
 
-            self.reached_macro_end = (macro_type == GdocxParsing.MACRO_TYPE_END or macro_type == GdocxParsing.MACRO_TYPE_ONE_LINE)
+        self.reached_macro_end = (macro_type == GdocxParsing.MACRO_TYPE_END or macro_type == GdocxParsing.MACRO_TYPE_ONE_LINE)
 
         return new_handler
     
     def process_plain_line(self, line: str, info: GdocxParsing.LineInfo):
-        self.cur_paragraph_lines.append(line)
+        self.paragraph_lines.append(info.line_stripped)
 
     def process_header(self, line: str, info: GdocxParsing.LineInfo):
         self.doc.add_heading(GdocxParsing.get_header_string(line), 0)
 
     def write_paragraph(self):
-        par = '\n'.join(self.cur_paragraph_lines)
+        par = '\n'.join(self.paragraph_lines)
         self.doc.add_paragraph(par)
 
     def flush_paragraph(self):
-        if len(self.cur_paragraph_lines) != 0:
+        if len(self.paragraph_lines) != 0:
             self.write_paragraph()
-            self.cur_paragraph_lines = []
+            self.paragraph_lines = []
 
     def finalize(self):
         self.flush_paragraph()
@@ -87,6 +100,3 @@ class GdocxState:
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.finalize()
-
-    def echo(line: str):
-        print("echo:", line)

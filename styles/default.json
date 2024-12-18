@@ -1,15 +1,36 @@
 {
     "paragraph": {
         "is_paragraph": true,
-        "first_line_indent": 1.5,
-        "left_indent": 1.5,
-        "line_spacing": 1.5
+        "first_line_indent": 1.25,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "DISTRIBUTE",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14
+        }
+    },
+    "list1": {
+        "is_paragraph": true,
+        "first_line_indent": 0,
+        "left_indent": 1.25,
+        "line_spacing": 1.5,
+        "base_style": "List Bullet"
     },
     "list": {
         "is_paragraph": true,
-        "first_line_indent": 2.5,
-        "left_indent": 2.5,
-        "line_spacing": 2.5,
-        "base_style": "List Bullet"
-    }
+        "first_line_indent": 1.25,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "DISTRIBUTE",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14
+        }
+    },
+    "unordered_list_prefix": "— "
 }

@@ -1,43 +1,62 @@
 # Can modify
-MACRO_START = "{"
+COMMENT_START = "#"
+MACRO_START = "("
 ESCAPE_CHAR = "\\"
-MACRO_END = "}"
-HEADER_START = "#"
+MACRO_END = ")"
 
-# Don't modify
+INDENT_DEFAULT_LENGTH = 4
+INDENT_DEFAULT_CHAR = " "
+INDENT_STRING = None
+STRIP_INDENT = False
+
+# Can't modify
 MACRO_START_ESCAPED = ESCAPE_CHAR + MACRO_START
 ESCAPE_CHAR_ESCAPED = ESCAPE_CHAR + MACRO_END
 
 INFO_TYPE_PLAIN_LINE = 0
 INFO_TYPE_MACRO = 1
-INFO_TYPE_HEADER = 2
+INFO_TYPE_COMMENT = 2
+
+def lstrip_indent(line: str, indent: int):
+    indent_string_len = len(INDENT_STRING)
+    while(indent > 0):
+        if line.startswith(INDENT_STRING):
+            line = line[indent_string_len:]
+        else:
+            return line
+        indent -= 1
+    return line
 
 class LineInfo:
-    def __init__(self, line: str):
-        line = line.lstrip(" ")
+    def __init__(self, line: str, indent: int):
+        line = lstrip_indent(line, indent).rstrip('\n')
         self.line_stripped = line
+        self.is_escaped = is_escaped(line)
+
+        if self.is_escaped:
+            self.type = INFO_TYPE_PLAIN_LINE
+            self.line_stripped = self.line_stripped[len(ESCAPE_CHAR)]
+            return
 
         if is_macro(line):
             self.type = INFO_TYPE_MACRO
-        elif is_header(line):
-            self.type = INFO_TYPE_HEADER
+        elif is_comment(line):
+            self.type = INFO_TYPE_COMMENT
         else:
             self.type = INFO_TYPE_PLAIN_LINE
 
-def process_line(line: str) -> (str, LineInfo):
+def parse_line(line: str, indent: int) -> (str, LineInfo):
     line = line.rstrip('\n')
-    return line, LineInfo(line)
+    return line, LineInfo(line, indent)
 
 def is_macro(line) -> bool:
     return line.startswith(MACRO_START) or line.startswith(MACRO_END)
 
-def is_header(line) -> bool:
-    return line.startswith(HEADER_START)
+def is_comment(line) -> bool:
+    return line.startswith(COMMENT_START)
 
-def get_header_string(line) -> str:
-    if not is_header(line):
-        raise Exception(f"get_header_string: line \"{line}\" is not header")
-    return line[len(HEADER_START):].lstrip(' ')
+def is_escaped(line) -> bool:
+    return line.startswith(ESCAPE_CHAR)
 
 MACRO_TYPE_START = 0
 MACRO_TYPE_END = 1
@@ -48,8 +67,10 @@ def get_macro_type(line) -> int:
         if line.endswith(MACRO_END):
             return MACRO_TYPE_ONE_LINE
         return MACRO_TYPE_START
+
     if line.startswith(MACRO_END):
         return MACRO_TYPE_END
+
     raise Exception(f'"{line}" is not macro')
 
 def parse_macro_args(line) -> list[str]:
