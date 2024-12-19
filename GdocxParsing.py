@@ -35,7 +35,7 @@ class LineInfo:
 
         if self.is_escaped:
             self.type = INFO_TYPE_PLAIN_LINE
-            self.line_stripped = self.line_stripped[len(ESCAPE_CHAR)]
+            self.line_stripped = self.line_stripped[len(ESCAPE_CHAR):]
             return
 
         if is_macro(line):

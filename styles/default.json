@@ -12,13 +12,6 @@
             "size": 14
         }
     },
-    "list1": {
-        "is_paragraph": true,
-        "first_line_indent": 0,
-        "left_indent": 1.25,
-        "line_spacing": 1.5,
-        "base_style": "List Bullet"
-    },
     "list": {
         "is_paragraph": true,
         "first_line_indent": 1.25,
@@ -32,5 +25,33 @@
             "size": 14
         }
     },
-    "unordered_list_prefix": "— "
+    "image-caption": {
+        "is_paragraph": true,
+        "first_line_indent": 0,
+        "left_indent": 0,
+        "line_spacing": 1,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "CENTER",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14
+        }
+    },
+    "image-paragraph": {
+        "is_paragraph": true,
+        "first_line_indent": 0,
+        "left_indent": 0,
+        "line_spacing": 1,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "CENTER",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14
+        }
+    },
+    "unordered_list_prefix": "— ",
+    "image_caption_prefix": "Рисунок ",
+    "image_caption_infix": " — "
 }

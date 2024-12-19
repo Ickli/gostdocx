@@ -10,6 +10,8 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.UnorderedListItemHandler,
         GdocxHandler.LoadStyleHandler,
         GdocxHandler.ParStyleHandler,
+        GdocxHandler.ImageHandler,
+        GdocxHandler.ImageCaptionHandler,
 ]
 
 def get_handler_dict(handlers: list[Type[Any]]):
@@ -42,9 +44,9 @@ class GdocxState:
 
         rawline, info = GdocxParsing.parse_line(line, indent)
         if info.type == GdocxParsing.INFO_TYPE_MACRO:
-            return self.process_macro_line(line, info)
+            return self.process_macro_line(rawline, info)
         elif info.type != GdocxParsing.INFO_TYPE_COMMENT:
-            self.handler.process_line(line, info)
+            self.handler.process_line(rawline, info)
 
         return None
 

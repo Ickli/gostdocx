@@ -5,27 +5,79 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.shared import Pt, Inches, Cm
 from docx import Document
 
+'''
+Guidelines for styles:
+    For an example of style formats, look into styles/default.json.
+
+    Recommendations:
+    As the tool is created for GOST 7.32 document creation, please be aware
+    of the following (list of things which surprised me):
+    1. Centered text is truly centered only when first_line_indent = 0;
+    2. Image caption is part of the same paragraph of which the image is
+        (meaning that user must press SHIFT+ENTER to insert caption according
+        to GOST) and should only be used right after the image;
+    3. Therefore, style for image should contain description of image caption
+        too.
+    4. But I've added separate IMAGE_CAPTION style, so the tool is a bit more
+        flexible.
+
+    File and parsing description:
+    1. Styles' file contains pairs of style names and style descriptions,
+        and pairs of element names and element values;
+    2. Every style description currently must contain "is_paragraph": true
+        because the tool only supports ParagraphStyle settings;
+    3. Feilds of style description directly correlate to attributes of
+        ParagraphStyle, except:
+            "font" field, which is object of format: {
+                "name": "FONT_NAME",
+                "size": SIZE_IN_PT
+            },
+            "base_style" field whose value is used to subscript doc.styles,
+            "alignment" field whose value is gotten via
+                getattr(WD_PARAGRAPH_ALIGNMENT, ...),
+
+    4. Every number is in Cm units, if not stated otherwise;
+    5. Every element name is parsed as a special case in parse_raw_styles
+        and is reflected in class Style as bunch of static attributes
+'''
+
 # names for fields of json, 
-# these fields do not correlate to any docx.Style attribute
+# these fields do not correlate to any ParagraphStyle attribute
 FIELD_IS_PAR = "is_paragraph"
 FIELD_UNORDERED_LIST_PREFIX = "unordered_list_prefix"
+FIELD_IMAGE_CAPTION_PREFIX = "image_caption_prefix"
+FIELD_IMAGE_CAPTION_INFIX = "image_caption_infix"
 
 # You can change it
 # Don't forget to add new default styles in set_defaults_if_not_set()
 class Style:
     UNORDERED_LIST_PREFIX = None
+    IMAGE_CAPTION_PREFIX = None
+    IMAGE_CAPTION_INFIX = None
+
     UNORDERED_LIST = None
     ORDERED_LIST = None
+    IMAGE_PARAGRAPH = None
+    # Note: this style is not used in GOST 7.32 really;
+    #   instead, description of caption's style is 
+    #   dictated by IMAGE_PARAGRAPH.
+    # But you still can set the flag in ImageCaptionHandler,
+    #   to use this style
+    IMAGE_CAPTION = None
 
     # Names for default styles
     DNAME_UNORDERED_LIST = "list"
-    DNAME_ORDERED_LIST = "List Number"
+    DNAME_ORDERED_LIST = "list"
+    DNAME_IMAGE_PARAGRAPH = "image-paragraph"
+    DNAME_IMAGE_CAPTION = "image-caption"
 
 def set_defaults_if_not_set(doc: Document):
     if Style.UNORDERED_LIST is None:
         Style.UNORDERED_LIST = doc.styles[Style.DNAME_UNORDERED_LIST]
     if Style.ORDERED_LIST is None:
         Style.ORDERED_LIST = doc.styles[Style.DNAME_ORDERED_LIST]
+    if Style.IMAGE_PARAGRAPH is None:
+        Style.IMAGE_PARAGRAPH = doc.styles[Style.DNAME_IMAGE_PARAGRAPH]
 
 # Properties of this style are not dictated by any json
 # All newly created styles will use these properties if not overriden
@@ -46,6 +98,12 @@ def parse_raw_styles(json_string: str, doc: Document):
     for style_name in raw_styles:
         if style_name == FIELD_UNORDERED_LIST_PREFIX:
             Style.UNORDERED_LIST_PREFIX = raw_styles[style_name]
+            continue
+        if style_name == FIELD_IMAGE_CAPTION_PREFIX:
+            Style.IMAGE_CAPTION_PREFIX = raw_styles[style_name]
+            continue
+        if style_name == FIELD_IMAGE_CAPTION_INFIX:
+            Style.IMAGE_CAPTION_INFIX = raw_styles[style_name]
             continue
         if style_name in doc.styles:
             raise Exception(f"Style {style_name} encountered twice")
