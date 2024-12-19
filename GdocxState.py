@@ -52,10 +52,7 @@ class GdocxState:
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         # GdocxParsing.INFO_TYPE_MACRO is handled in caller 'handle_or_get_new_handler'
-        if info.type == GdocxParsing.INFO_TYPE_PLAIN_LINE:
-            self.process_plain_line(line, info)
-        elif info.type == GdocxParsing.INFO_TYPE_HEADER:
-            self.process_header(line, info)
+        self.paragraph_lines.append(info.line_stripped)
 
     # Returns new handler or None
     def process_macro_line(self, 
@@ -79,15 +76,12 @@ class GdocxState:
 
         return new_handler
     
-    def process_plain_line(self, line: str, info: GdocxParsing.LineInfo):
-        self.paragraph_lines.append(info.line_stripped)
-
     def process_header(self, line: str, info: GdocxParsing.LineInfo):
         self.doc.add_heading(GdocxParsing.get_header_string(line), 0)
 
     def write_paragraph(self):
-        par = '\n'.join(self.paragraph_lines)
-        self.doc.add_paragraph(par)
+        par_content = '\n'.join(self.paragraph_lines)
+        self.doc.add_paragraph(par_content, GdocxStyle.Style.PARAGRAPH)
 
     def flush_paragraph(self):
         if len(self.paragraph_lines) != 0:

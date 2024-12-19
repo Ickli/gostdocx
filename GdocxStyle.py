@@ -55,6 +55,7 @@ class Style:
     IMAGE_CAPTION_PREFIX = None
     IMAGE_CAPTION_INFIX = None
 
+    PARAGRAPH = None
     UNORDERED_LIST = None
     ORDERED_LIST = None
     IMAGE_PARAGRAPH = None
@@ -66,6 +67,7 @@ class Style:
     IMAGE_CAPTION = None
 
     # Names for default styles
+    DNAME_PARAGRAPH = "paragraph"
     DNAME_UNORDERED_LIST = "list"
     DNAME_ORDERED_LIST = "list"
     DNAME_IMAGE_PARAGRAPH = "image-paragraph"
@@ -78,6 +80,8 @@ def set_defaults_if_not_set(doc: Document):
         Style.ORDERED_LIST = doc.styles[Style.DNAME_ORDERED_LIST]
     if Style.IMAGE_PARAGRAPH is None:
         Style.IMAGE_PARAGRAPH = doc.styles[Style.DNAME_IMAGE_PARAGRAPH]
+    if Style.PARAGRAPH is None:
+        Style.PARAGRAPH = doc.styles[Style.DNAME_PARAGRAPH]
 
 # Properties of this style are not dictated by any json
 # All newly created styles will use these properties if not overriden
