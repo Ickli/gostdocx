@@ -12,6 +12,7 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.ParStyleHandler,
         GdocxHandler.ImageHandler,
         GdocxHandler.ImageCaptionHandler,
+        GdocxHandler.PageBreakHandler,
 ]
 
 def get_handler_dict(handlers: list[Type[Any]]):
@@ -22,6 +23,8 @@ def get_handler_dict(handlers: list[Type[Any]]):
 
 # Document passed to ctor must outlive GdocxState
 class GdocxState:
+    STYLE = "paragraph"
+
     def __init__(self, 
         doc: Document, 
         handlers: list[Type[Any]]
@@ -83,7 +86,7 @@ class GdocxState:
 
     def write_paragraph(self):
         par_content = '\n'.join(self.paragraph_lines)
-        self.doc.add_paragraph(par_content, GdocxStyle.Style.PARAGRAPH)
+        self.doc.add_paragraph(par_content, style = self.STYLE)
 
     def flush_paragraph(self):
         if len(self.paragraph_lines) != 0:

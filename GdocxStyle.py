@@ -2,7 +2,7 @@ import json
 from docx.styles.style import BaseStyle, ParagraphStyle
 from docx.enum.text import WD_LINE_SPACING, WD_PARAGRAPH_ALIGNMENT
 from docx.enum.style import WD_STYLE_TYPE
-from docx.shared import Pt, Inches, Cm
+from docx.shared import Pt, Inches, Cm, RGBColor
 from docx import Document
 
 '''
@@ -30,7 +30,8 @@ Guidelines for styles:
         ParagraphStyle, except:
             "font" field, which is object of format: {
                 "name": "FONT_NAME",
-                "size": SIZE_IN_PT
+                "size": SIZE_IN_PT,
+                "color: [int, int, int]
             },
             "base_style" field whose value is used to subscript doc.styles,
             "alignment" field whose value is gotten via
@@ -54,40 +55,6 @@ class Style:
     UNORDERED_LIST_PREFIX = None
     IMAGE_CAPTION_PREFIX = None
     IMAGE_CAPTION_INFIX = None
-
-    PARAGRAPH = None
-    UNORDERED_LIST = None
-    ORDERED_LIST = None
-    IMAGE_PARAGRAPH = None
-    HEADING_1 = None
-    HEADING_2 = None
-    # Note: this style is not used in GOST 7.32 really;
-    #   instead, description of caption's style is 
-    #   dictated by IMAGE_PARAGRAPH.
-    # But you still can set the flag in ImageCaptionHandler,
-    #   to use this style
-    IMAGE_CAPTION = None
-
-    # Names for default styles
-    DNAME_PARAGRAPH = "paragraph"
-    DNAME_UNORDERED_LIST = "list"
-    DNAME_ORDERED_LIST = "list"
-    DNAME_IMAGE_PARAGRAPH = "image-paragraph"
-    DNAME_IMAGE_CAPTION = "image-caption"
-    DNAME_HEADING_1 = "heading-1"
-    DNAME_HEADING_2 = "heading-2"
-    DNAME_HEADING_1_NON_TOC = "heading-1-non-toc"
-    DNAME_HEADING_2_NON_TOC = "heading-2-non-toc"
-
-def set_defaults_if_not_set(doc: Document):
-    if Style.UNORDERED_LIST is None:
-        Style.UNORDERED_LIST = doc.styles[Style.DNAME_UNORDERED_LIST]
-    if Style.ORDERED_LIST is None:
-        Style.ORDERED_LIST = doc.styles[Style.DNAME_ORDERED_LIST]
-    if Style.IMAGE_PARAGRAPH is None:
-        Style.IMAGE_PARAGRAPH = doc.styles[Style.DNAME_IMAGE_PARAGRAPH]
-    if Style.PARAGRAPH is None:
-        Style.PARAGRAPH = doc.styles[Style.DNAME_PARAGRAPH]
 
 # Properties of this style are not dictated by any json
 # All newly created styles will use these properties if not overriden
@@ -145,5 +112,7 @@ def parse_raw_font(style: BaseStyle, font_dict: dict[str, object]):
         value = font_dict[name]
         if name == "size":
             style.font.size = Pt(value)
+        elif name == "color":
+            style.font.color.rgb = RGBColor(value[0], value[1], value[2])
         else:
             setattr(style.font, name, value)

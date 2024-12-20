@@ -6,6 +6,7 @@ from typing import Type, Any
 import GdocxParsing
 import GdocxHandler
 import GdocxStyle
+import GdocxCommon
 
 PATH_DEFAULT_STYLES = "styles/default.json"
 
@@ -51,7 +52,6 @@ def process_file(filepath: str, filepath_out: str):
     file = open(filepath, "r")
     doc = Document()
     GdocxStyle.use_styles_from_file(PATH_DEFAULT_STYLES, doc)
-    GdocxStyle.set_defaults_if_not_set(doc)
 
     with GdocxState(doc, registered_macro_handlers) as state:
         state.strip_indent = GdocxParsing.STRIP_INDENT

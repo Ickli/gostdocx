@@ -1,9 +1,11 @@
 import GdocxParsing
 import GdocxStyle
+import GdocxCommon
 from docx.shared import Cm
 
 # handler trait:
 #   NAME: str
+#   STYLE: str
 #
 #   # Called on every occurrence of custom macro in file
 #   __init__(self, state: GdocxState, macro_args: list[str]);
@@ -22,14 +24,28 @@ class EchoHandler:
         pass
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
-        raise Exception("You must not place content inside echo")
+        raise Exception(f"You must not place content inside {self.NAME}")
 
     def finalize(self):
         pass
 
+class PageBreakHandler:
+    NAME = "page-break"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        self.state = state
+        pass
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        self.state.doc.add_page_break()
+
 # Converts paragraphs to unordered list items
 class UnorderedListItemHandler:
     NAME = "unordered-list-item"
+    STYLE = "list"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         self.state = state
@@ -45,8 +61,7 @@ class UnorderedListItemHandler:
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        par = self.state.doc.add_paragraph(par_content)
-        par.style = GdocxStyle.Style.UNORDERED_LIST
+        par = self.state.doc.add_paragraph(par_content, style = self.STYLE)
 
 # Applies style to macro contents, treating it as a paragraph
 class ParStyleHandler:
@@ -99,6 +114,7 @@ class OrderedListHandler:
 class OrderedListItemHandler:
     INFIX = ". "
     NAME = "ordered-list-item"
+    STYLE = "list"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         if state.handler.NAME != OrderedListHandler.NAME:
@@ -119,11 +135,11 @@ class OrderedListItemHandler:
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        par = self.state.doc.add_paragraph(par_content)
-        par.style = GdocxStyle.Style.ORDERED_LIST
+        self.state.doc.add_paragraph(par_content, style = self.STYLE)
 
 class ImageHandler:
     NAME = "image"
+    STYLE = "image-paragraph"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         if len(macro_args) == 0:
@@ -149,7 +165,7 @@ class ImageHandler:
         raise Exception(f"You must not put contents into {self.NAME} macro")
 
     def finalize(self):
-        par = self.state.doc.add_paragraph(None, style = GdocxStyle.Style.IMAGE_PARAGRAPH)
+        par = self.state.doc.add_paragraph(None, style = self.STYLE)
         run = par.add_run()
         run.add_picture(self.path, self.width, self.height)
 
@@ -159,6 +175,7 @@ class ImageCaptionHandler:
     # presses SHIFT+ENTER and then types caption by hand
     STICK_TO_PREV_PARAGRAPH = True
     NAME = "image-caption"
+    STYLE = "image-caption"
     ItemFreeNumber = 1
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
@@ -183,13 +200,15 @@ class ImageCaptionHandler:
             self.state.doc.add_paragraph(content, style = GdocxStyle.Style.IMAGE_CAPTION)
         else:
             content = '\n' + content
-            self.state.doc.paragraphs[-1].add_run(content, style = GdocxStyle.Style.IMAGE_CAPTION)
+            self.state.doc.paragraphs[-1].add_run(content)
 
 
 IsHeadingWarningSet = False
 
+'''
 class Heading1Handler:
     NAME = "heading-1"
+    STYLE = "heading-1"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         global IsHeadingWarningSet
@@ -206,10 +225,11 @@ class Heading1Handler:
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        self.state.doc.add_paragraph(par_content, style = GdocxStyle.Style.HEADING_1)
+        self.state.doc.add_paragraph(par_content, style = self.STYLE)
         
 class Heading2Handler:
     NAME = "heading-2"
+    STYLE = "heading-2"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         global IsHeadingWarningSet
@@ -226,4 +246,5 @@ class Heading2Handler:
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        self.state.doc.add_paragraph(par_content, style = GdocxStyle.Style.HEADING_2)
+        self.state.doc.add_paragraph(par_content, style = self.STYLE)
+'''

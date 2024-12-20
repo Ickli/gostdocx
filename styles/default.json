@@ -64,7 +64,8 @@
             "name": "Times New Roman",
             "size": 14,
             "bold": true,
-            "all_caps": true
+            "all_caps": true,
+            "color": [0, 0, 0]
         }
     },
     "heading-2": {
@@ -79,7 +80,8 @@
         "font": {
             "name": "Times New Roman",
             "size": 14,
-            "bold": true
+            "bold": true,
+            "color": [0, 0, 0]
         }
     },
     "heading-1-non-toc": {
