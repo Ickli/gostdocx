@@ -59,6 +59,8 @@ class Style:
     UNORDERED_LIST = None
     ORDERED_LIST = None
     IMAGE_PARAGRAPH = None
+    HEADING_1 = None
+    HEADING_2 = None
     # Note: this style is not used in GOST 7.32 really;
     #   instead, description of caption's style is 
     #   dictated by IMAGE_PARAGRAPH.
@@ -72,6 +74,10 @@ class Style:
     DNAME_ORDERED_LIST = "list"
     DNAME_IMAGE_PARAGRAPH = "image-paragraph"
     DNAME_IMAGE_CAPTION = "image-caption"
+    DNAME_HEADING_1 = "heading-1"
+    DNAME_HEADING_2 = "heading-2"
+    DNAME_HEADING_1_NON_TOC = "heading-1-non-toc"
+    DNAME_HEADING_2_NON_TOC = "heading-2-non-toc"
 
 def set_defaults_if_not_set(doc: Document):
     if Style.UNORDERED_LIST is None:

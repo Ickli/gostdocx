@@ -3,7 +3,7 @@ import GdocxStyle
 from docx.shared import Cm
 
 # handler trait:
-#   Name: str
+#   NAME: str
 #
 #   # Called on every occurrence of custom macro in file
 #   __init__(self, state: GdocxState, macro_args: list[str]);
@@ -15,7 +15,7 @@ from docx.shared import Cm
 #   finalize(self);
 
 class EchoHandler:
-    Name = "echo"
+    NAME = "echo"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         print('echo: ', *macro_args)
@@ -29,7 +29,7 @@ class EchoHandler:
 
 # Converts paragraphs to unordered list items
 class UnorderedListItemHandler:
-    Name = "unordered-list-item"
+    NAME = "unordered-list-item"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         self.state = state
@@ -50,7 +50,7 @@ class UnorderedListItemHandler:
 
 # Applies style to macro contents, treating it as a paragraph
 class ParStyleHandler:
-    Name = "paragraph-styled"
+    NAME = "paragraph-styled"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         if len(macro_args) == 0:
@@ -69,7 +69,7 @@ class ParStyleHandler:
         par.style = self.state.doc.styles[self.style_name]
 
 class LoadStyleHandler:
-    Name = "load-style"
+    NAME = "load-style"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         if len(macro_args) == 0:
@@ -83,26 +83,26 @@ class LoadStyleHandler:
         pass
 
 class OrderedListHandler:
-    Name = "ordered-list"
+    NAME = "ordered-list"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         self.free_item_number = 1
         state.handler.finalize()
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
-        raise Exception(f"You must provide contents of {self.Name} within macro {OrderedListItemHandler.Name}")
+        raise Exception(f"You must provide contents of {self.NAME} within macro {OrderedListItemHandler.NAME}")
 
     def finalize(self):
         pass
 
 
 class OrderedListItemHandler:
-    Infix = ". "
-    Name = "ordered-list-item"
+    INFIX = ". "
+    NAME = "ordered-list-item"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
-        if state.handler.Name != OrderedListHandler.Name:
-            raise Exception(f"{self.Name} macro must be inside {OrderedListHandler.Name} macro")
+        if state.handler.NAME != OrderedListHandler.NAME:
+            raise Exception(f"{self.NAME} macro must be inside {OrderedListHandler.NAME} macro")
 
         self.state = state
         self.cur_paragraph_lines = []
@@ -113,7 +113,7 @@ class OrderedListItemHandler:
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         if not self.is_first_line_processed:
-            line_stripped = str(self.item_number) + self.Infix + info.line_stripped
+            line_stripped = str(self.item_number) + self.INFIX + info.line_stripped
             self.is_first_line_processed = True
         self.cur_paragraph_lines.append(line_stripped)
 
@@ -123,11 +123,11 @@ class OrderedListItemHandler:
         par.style = GdocxStyle.Style.ORDERED_LIST
 
 class ImageHandler:
-    Name = "image"
+    NAME = "image"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         if len(macro_args) == 0:
-            raise Exception(f"Macro {self.Name} called without arguments")
+            raise Exception(f"Macro {self.NAME} called without arguments")
         self.state = state
         self.width = None
         self.height = None
@@ -146,7 +146,7 @@ class ImageHandler:
         self.path = macro_args[0]
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
-        raise Exception(f"You must not put contents into {self.Name} macro")
+        raise Exception(f"You must not put contents into {self.NAME} macro")
 
     def finalize(self):
         par = self.state.doc.add_paragraph(None, style = GdocxStyle.Style.IMAGE_PARAGRAPH)
@@ -158,16 +158,16 @@ class ImageCaptionHandler:
     # we insert the latter to the paragraph of the first. Thus, it's as if user
     # presses SHIFT+ENTER and then types caption by hand
     STICK_TO_PREV_PARAGRAPH = True
-    Name = "image-caption"
-    FreeItemNumber = 1
+    NAME = "image-caption"
+    ItemFreeNumber = 1
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         self.state = state
         self.paragraph_lines = []
         self.is_first_line_processed = False
 
-        self.item_number = self.FreeItemNumber
-        self.FreeItemNumber += 1
+        self.item_number = self.ItemFreeNumber
+        self.ItemFreeNumber += 1
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         line_stripped = info.line_stripped
@@ -184,3 +184,46 @@ class ImageCaptionHandler:
         else:
             content = '\n' + content
             self.state.doc.paragraphs[-1].add_run(content, style = GdocxStyle.Style.IMAGE_CAPTION)
+
+
+IsHeadingWarningSet = False
+
+class Heading1Handler:
+    NAME = "heading-1"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        global IsHeadingWarningSet
+        if not IsHeadingWarningSet:
+            IsHeadingWarningSet = True
+            GdocxCommon.Warnings.append(GdocxCommon.GdocxWarning(state.lineno, "Can't construct TOC automatically. Add TOC manually"))
+
+        self.state = state
+        self.cur_paragraph_lines = []
+        state.handler.finalize()
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        self.cur_paragraph_lines.append(info.line_stripped)
+
+    def finalize(self):
+        par_content = '\n'.join(self.cur_paragraph_lines)
+        self.state.doc.add_paragraph(par_content, style = GdocxStyle.Style.HEADING_1)
+        
+class Heading2Handler:
+    NAME = "heading-2"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        global IsHeadingWarningSet
+        if not IsHeadingWarningSet:
+            IsHeadingWarningSet = True
+            GdocxCommon.Warnings.append(GdocxCommon.GdocxWarning(state.lineno, "Can't construct TOC automatically. Add TOC manually"))
+
+        self.state = state
+        self.cur_paragraph_lines = []
+        state.handler.finalize()
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        self.cur_paragraph_lines.append(info.line_stripped)
+
+    def finalize(self):
+        par_content = '\n'.join(self.cur_paragraph_lines)
+        self.state.doc.add_paragraph(par_content, style = GdocxStyle.Style.HEADING_2)

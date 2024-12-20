@@ -51,6 +51,66 @@
             "size": 14
         }
     },
+    "heading-1": {
+        "is_paragraph": true,
+        "first_line_indent": 0,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "CENTER",
+        "base_style": "Heading 1",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14,
+            "bold": true,
+            "all_caps": true
+        }
+    },
+    "heading-2": {
+        "is_paragraph": true,
+        "first_line_indent": 1.25,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "DISTRIBUTE",
+        "base_style": "Heading 2",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14,
+            "bold": true
+        }
+    },
+    "heading-1-non-toc": {
+        "is_paragraph": true,
+        "first_line_indent": 0,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "CENTER",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14,
+            "bold": true,
+            "all_caps": true
+        }
+    },
+    "heading-2-non-toc": {
+        "is_paragraph": true,
+        "first_line_indent": 1.25,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "DISTRIBUTE",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14,
+            "bold": true
+        }
+    },
     "unordered_list_prefix": "— ",
     "image_caption_prefix": "Рисунок ",
     "image_caption_infix": " — "

@@ -60,6 +60,8 @@ def process_file(filepath: str, filepath_out: str):
 
     file.close()
     doc.save(filepath_out)
+    for warn in GdocxCommon.Warnings:
+        print(warn)
 
 def process_args() -> (str, str):
     inpath: str | None = None

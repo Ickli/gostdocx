@@ -17,7 +17,7 @@ default_handlers: list[Type[Any]] = [
 def get_handler_dict(handlers: list[Type[Any]]):
     handler_dict = {}
     for handler in handlers:
-        handler_dict[handler.Name] = handler
+        handler_dict[handler.NAME] = handler
     return handler_dict
 
 # Document passed to ctor must outlive GdocxState
@@ -34,12 +34,14 @@ class GdocxState:
         self.handler = self
         self.indent = 0
         self.strip_indent = False
+        self.line_number = 0
 
     # Returns new handler, if macro is encountered;
     # otherwise, returns None
     def handle_or_get_new_handler(self,
         line: str
     ) -> object | None:
+        self.line_number += 1
         indent = self.indent if self.strip_indent else 0
 
         rawline, info = GdocxParsing.parse_line(line, indent)
