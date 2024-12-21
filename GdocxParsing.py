@@ -8,6 +8,7 @@ INDENT_DEFAULT_LENGTH = 4
 INDENT_DEFAULT_CHAR = " "
 INDENT_STRING = None
 STRIP_INDENT = False
+SKIP_EMPTY = False
 
 # Can't modify
 MACRO_START_ESCAPED = ESCAPE_CHAR + MACRO_START
@@ -32,6 +33,7 @@ class LineInfo:
         line = lstrip_indent(line, indent).rstrip('\n')
         self.line_stripped = line
         self.is_escaped = is_escaped(line)
+        self.is_empty = False
 
         if self.is_escaped:
             self.type = INFO_TYPE_PLAIN_LINE
@@ -43,6 +45,8 @@ class LineInfo:
         elif is_comment(line):
             self.type = INFO_TYPE_COMMENT
         else:
+            if self.line_stripped == "":
+                self.is_empty = True
             self.type = INFO_TYPE_PLAIN_LINE
 
 def parse_line(line: str, indent: int) -> (str, LineInfo):

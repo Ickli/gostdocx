@@ -5,7 +5,6 @@ from docx.shared import Cm
 
 # handler trait:
 #   NAME: str
-#   STYLE: str
 #
 #   # Called on every occurrence of custom macro in file
 #   __init__(self, state: GdocxState, macro_args: list[str]);
@@ -18,9 +17,10 @@ from docx.shared import Cm
 
 class EchoHandler:
     NAME = "echo"
+    Prefix = "echo: "
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
-        print('echo: ', *macro_args)
+        print(self.Prefix, *macro_args)
         pass
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
@@ -201,50 +201,3 @@ class ImageCaptionHandler:
         else:
             content = '\n' + content
             self.state.doc.paragraphs[-1].add_run(content)
-
-
-IsHeadingWarningSet = False
-
-'''
-class Heading1Handler:
-    NAME = "heading-1"
-    STYLE = "heading-1"
-
-    def __init__(self, state: 'GdocxState', macro_args: list[str]):
-        global IsHeadingWarningSet
-        if not IsHeadingWarningSet:
-            IsHeadingWarningSet = True
-            GdocxCommon.Warnings.append(GdocxCommon.GdocxWarning(state.lineno, "Can't construct TOC automatically. Add TOC manually"))
-
-        self.state = state
-        self.cur_paragraph_lines = []
-        state.handler.finalize()
-
-    def process_line(self, line: str, info: GdocxParsing.LineInfo):
-        self.cur_paragraph_lines.append(info.line_stripped)
-
-    def finalize(self):
-        par_content = '\n'.join(self.cur_paragraph_lines)
-        self.state.doc.add_paragraph(par_content, style = self.STYLE)
-        
-class Heading2Handler:
-    NAME = "heading-2"
-    STYLE = "heading-2"
-
-    def __init__(self, state: 'GdocxState', macro_args: list[str]):
-        global IsHeadingWarningSet
-        if not IsHeadingWarningSet:
-            IsHeadingWarningSet = True
-            GdocxCommon.Warnings.append(GdocxCommon.GdocxWarning(state.lineno, "Can't construct TOC automatically. Add TOC manually"))
-
-        self.state = state
-        self.cur_paragraph_lines = []
-        state.handler.finalize()
-
-    def process_line(self, line: str, info: GdocxParsing.LineInfo):
-        self.cur_paragraph_lines.append(info.line_stripped)
-
-    def finalize(self):
-        par_content = '\n'.join(self.cur_paragraph_lines)
-        self.state.doc.add_paragraph(par_content, style = self.STYLE)
-'''

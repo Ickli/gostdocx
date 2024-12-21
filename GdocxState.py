@@ -15,12 +15,6 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.PageBreakHandler,
 ]
 
-def get_handler_dict(handlers: list[Type[Any]]):
-    handler_dict = {}
-    for handler in handlers:
-        handler_dict[handler.NAME] = handler
-    return handler_dict
-
 # Document passed to ctor must outlive GdocxState
 class GdocxState:
     STYLE = "paragraph"
@@ -37,6 +31,7 @@ class GdocxState:
         self.handler = self
         self.indent = 0
         self.strip_indent = False
+        self.skip_empty = False
         self.line_number = 0
 
     # Returns new handler, if macro is encountered;
@@ -48,6 +43,9 @@ class GdocxState:
         indent = self.indent if self.strip_indent else 0
 
         rawline, info = GdocxParsing.parse_line(line, indent)
+
+        if info.is_empty and self.skip_empty:
+            return None
         if info.type == GdocxParsing.INFO_TYPE_MACRO:
             return self.process_macro_line(rawline, info)
         elif info.type != GdocxParsing.INFO_TYPE_COMMENT:
@@ -101,3 +99,10 @@ class GdocxState:
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.finalize()
+
+def get_handler_dict(handlers: list[Type[Any]]):
+    handler_dict = {}
+    for handler in handlers:
+        handler_dict[handler.NAME] = handler
+    return handler_dict
+
