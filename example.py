@@ -41,7 +41,7 @@ And we can also support regular text.
 Isn't it wonderful?
 '''
 
-EXAMPLE_COMMENT = f'''Created files:
+EXAMPLE_COMMENT_ENG = f'''Created files:
     {EXAMPLE_INPUT_FILE}
     {EXAMPLE_OUTPUT_FILE}
 >> You can look into example.txt to see, how to write your own input files.
@@ -49,8 +49,9 @@ EXAMPLE_COMMENT = f'''Created files:
 
 To use YOUR_INPUT_FILE_PATH.txt, use the following command:
     python3 main.py -i YOUR_INPUT_FILE_PATH.txt -o YOUR_OUTPUT_FILE_PATH.txt -s -se
+'''
 
-Созданные файлы:
+EXAMPLE_COMMENT_RUS = '''Созданные файлы:
     {EXAMPLE_INPUT_FILE}
     {EXAMPLE_OUTPUT_FILE}
 >> Ты можешь посмотреть содержимое example.txt, чтобы увидеть, как написать свой .txt файл.
@@ -61,7 +62,9 @@ To use YOUR_INPUT_FILE_PATH.txt, use the following command:
 '''
 
 if __name__ == "__main__":
-    print(EXAMPLE_COMMENT)
+    print(EXAMPLE_COMMENT_RUS)
+    input("Press Enter to see this message in English")
+    print(EXAMPLE_COMMENT_ENG)
 
     inpath = EXAMPLE_INPUT_FILE
     outpath = EXAMPLE_OUTPUT_FILE
