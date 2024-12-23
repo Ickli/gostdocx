@@ -7,6 +7,7 @@ import GdocxStyle
 default_handlers: list[Type[Any]] = [
         GdocxHandler.OrderedListHandler,
         GdocxHandler.OrderedListItemHandler,
+        GdocxHandler.UnorderedListHandler,
         GdocxHandler.UnorderedListItemHandler,
         GdocxHandler.LoadStyleHandler,
         GdocxHandler.ParStyleHandler,
@@ -17,6 +18,7 @@ default_handlers: list[Type[Any]] = [
 
 # Document passed to ctor must outlive GdocxState
 class GdocxState:
+    NAME = "gdocx-state"
     STYLE = "paragraph"
 
     def __init__(self, 

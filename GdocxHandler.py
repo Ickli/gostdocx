@@ -42,12 +42,26 @@ class PageBreakHandler:
     def finalize(self):
         self.state.doc.add_page_break()
 
+class UnorderedListHandler:
+    NAME = "unordered-list"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        pass
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You musn't place contents inside {self.NAME} macro")
+
+    def finalize(self):
+        pass
+
 # Converts paragraphs to unordered list items
 class UnorderedListItemHandler:
     NAME = "unordered-list-item"
     STYLE = "list"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        if state.handler.NAME != UnorderedListHandler.NAME:
+            raise Exception(f"{self.NAME} macro must be inside {UnorderedListHandler.NAME} macro")
         self.state = state
         self.cur_paragraph_lines = []
         self.is_first_line_processed = False

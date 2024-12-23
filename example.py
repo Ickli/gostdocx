@@ -5,11 +5,13 @@ EXAMPLE_INPUT_FILE = "example.txt"
 EXAMPLE_OUTPUT_FILE = "example.docx"
 EXAMPLE_INPUT_STRING = f'''
 ({EchoHandler.NAME } "This line is printed during processing of {EXAMPLE_INPUT_FILE}. Эта строка выведена во время обработки {EXAMPLE_INPUT_FILE}")
+({UnorderedListHandler.NAME}
 ({UnorderedListItemHandler.NAME}
     FIRST ITEM
 )
 ({UnorderedListItemHandler.NAME}
     SECOND ITEM
+)
 )
 ({ParStyleHandler.NAME} heading-1
     BIG HEADER
@@ -51,7 +53,7 @@ To use YOUR_INPUT_FILE_PATH.txt, use the following command:
     python3 main.py -i YOUR_INPUT_FILE_PATH.txt -o YOUR_OUTPUT_FILE_PATH.txt -s -se
 '''
 
-EXAMPLE_COMMENT_RUS = '''Созданные файлы:
+EXAMPLE_COMMENT_RUS = f'''Созданные файлы:
     {EXAMPLE_INPUT_FILE}
     {EXAMPLE_OUTPUT_FILE}
 >> Ты можешь посмотреть содержимое example.txt, чтобы увидеть, как написать свой .txt файл.
