@@ -2,6 +2,9 @@ import GdocxParsing
 import GdocxStyle
 import GdocxCommon
 from docx.shared import Cm
+from docx.table import _Cell
+from docx.styles.style import ParagraphStyle
+from docx.text.paragraph import Paragraph
 
 # handler trait:
 #   NAME: str
@@ -14,6 +17,17 @@ from docx.shared import Cm
 #
 #   # Called when reached end of scope of custom macro
 #   finalize(self);
+
+# Almost all handlers refer to state.receiver and not state.doc.
+# It serves as a proxy to state.doc.
+# Handlers may change state.receiver
+#
+# receiver trait:
+#   NAME: str
+#   
+#   add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph;
+#
+#   get_paragraphs(self) -> list[docx.Paragraph]
 
 class EchoHandler:
     NAME = "echo"
@@ -75,7 +89,7 @@ class UnorderedListItemHandler:
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        par = self.state.doc.add_paragraph(par_content, style = self.STYLE)
+        par = self.state.receiver.add_paragraph(par_content, style = self.STYLE)
 
 # Applies style to macro contents, treating it as a paragraph
 class ParStyleHandler:
@@ -87,14 +101,14 @@ class ParStyleHandler:
         self.state = state
         self.style_name = macro_args[0]
         self.cur_paragraph_lines = []
-        state.handler.finalize()
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         self.cur_paragraph_lines.append(info.line_stripped)
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        par = self.state.doc.add_paragraph(par_content)
+        par = self.state.receiver.add_paragraph(par_content)
+        print(f"PAR {self.state.receiver.NAME}:\n\t{par_content}")
         par.style = self.state.doc.styles[self.style_name]
 
 class LoadStyleHandler:
@@ -149,7 +163,7 @@ class OrderedListItemHandler:
 
     def finalize(self):
         par_content = '\n'.join(self.cur_paragraph_lines)
-        self.state.doc.add_paragraph(par_content, style = self.STYLE)
+        self.state.receiver.add_paragraph(par_content, style = self.STYLE)
 
 class ImageHandler:
     NAME = "image"
@@ -179,7 +193,7 @@ class ImageHandler:
         raise Exception(f"You must not put contents into {self.NAME} macro")
 
     def finalize(self):
-        par = self.state.doc.add_paragraph(None, style = self.STYLE)
+        par = self.state.receiver.add_paragraph(None, style = self.STYLE)
         run = par.add_run()
         run.add_picture(self.path, self.width, self.height)
 
@@ -211,7 +225,87 @@ class ImageCaptionHandler:
     def finalize(self):
         content = ' '.join(self.paragraph_lines)
         if not self.STICK_TO_PREV_PARAGRAPH:
-            self.state.doc.add_paragraph(content, style = GdocxStyle.Style.IMAGE_CAPTION)
+            self.state.receiver.add_paragraph(content, style = GdocxStyle.Style.IMAGE_CAPTION)
         else:
             content = '\n' + content
-            self.state.doc.paragraphs[-1].add_run(content)
+            self.state.receiver.get_paragraphs()[-1].add_run(content)
+
+class TableCellReceiver:
+    NAME = "TableReceiver"
+
+    def __init__(self, cell: _Cell):
+        self.cell = cell
+        self.first_par_added = False
+
+    def add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph:
+        if not self.first_par_added:
+            self.cell.paragraphs[0].text = text
+            self.cell.paragraphs[0].style = style
+            self.first_par_added = True
+            return self.cell.paragraphs[0]
+        return self.cell.add_paragraph(text, style)
+
+    def get_paragraphs(self):
+        return self.cell.paragraphs
+
+
+class TableHandler:
+    NAME = "table"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        if len(macro_args) < 2:
+            raise Exception(f"{self.NAME} must have at least 2 args")
+        self.rows = int(macro_args[0])
+        self.cols = int(macro_args[1])
+
+        self.state = state
+        self.table = self.state.doc.add_table(rows = self.rows, cols = self.cols)
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        print(self.state.line_number)
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        pass
+
+class TableCellHandler:
+    NAME = "table-cell"
+    STYLE = "paragraph"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        if len(macro_args) < 2:
+            raise Exception(f"{self.NAME} must have at least 2 args")
+        if state.handler.NAME != TableHandler.NAME:
+            raise Exception(f"{self.NAME} must be placed inside {TableHandler.NAME}")
+        self.table = state.handler
+        self.paragraph_lines = []
+
+        self.state = state
+        row = int(macro_args[0])
+        col = int(macro_args[1])
+
+        rowindex = row - 1
+        colindex = col - 1
+
+        if rowindex >= self.table.rows or rowindex < 0:
+            raise Exception(f"{self.NAME} row (= {row}) number must be between 1 and {self.table.rows - 1} inclusive")
+        if colindex >= self.table.cols or colindex < 0:
+            raise Exception(f"{self.NAME} col (= {col}) number must be between 1 and {self.table.cols - 1} inclusive")
+
+        self.prev_receiver = state.receiver
+
+        cell = self.table.table.rows[rowindex].cells[colindex]
+        state.receiver = TableCellReceiver(cell)
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        print('table cell line processed???')
+        self.paragraph_lines.append(info.line_stripped)
+
+    def finalize(self):
+        print(f'finalize table-cell {len(self.state.receiver.get_paragraphs())}')
+
+        if len(self.paragraph_lines) == 0:
+            return
+        par_content = '\n'.join(self.paragraph_lines)
+        self.state.receiver.add_paragraph(par_content, style = self.STYLE)
+        self.state.receiver = self.prev_receiver

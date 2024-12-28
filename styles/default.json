@@ -6,7 +6,7 @@
         "line_spacing": 1.5,
         "space_before": 0,
         "space_after": 0,
-        "alignment": "DISTRIBUTE",
+        "alignment": "JUSTIFY",
         "font": {
             "name": "Times New Roman",
             "size": 14
@@ -19,7 +19,7 @@
         "line_spacing": 1.5,
         "space_before": 0,
         "space_after": 0,
-        "alignment": "DISTRIBUTE",
+        "alignment": "JUSTIFY",
         "font": {
             "name": "Times New Roman",
             "size": 14
@@ -75,7 +75,7 @@
         "line_spacing": 1.5,
         "space_before": 0,
         "space_after": 0,
-        "alignment": "DISTRIBUTE",
+        "alignment": "JUSTIFY",
         "base_style": "Heading 2",
         "font": {
             "name": "Times New Roman",
@@ -106,7 +106,7 @@
         "line_spacing": 1.5,
         "space_before": 0,
         "space_after": 0,
-        "alignment": "DISTRIBUTE",
+        "alignment": "JUSTIFY",
         "font": {
             "name": "Times New Roman",
             "size": 14,

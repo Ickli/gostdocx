@@ -37,6 +37,9 @@ def process_with_current_handler(file, state: GdocxState):
             old_handler = state.handler
             state.handler = new_handler
 
+            if old_handler.NAME == GdocxState.NAME:
+                state.finalize()
+
             state.indent += 1
             process_with_current_handler(file, state)
 

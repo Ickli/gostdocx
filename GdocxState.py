@@ -1,5 +1,7 @@
 from typing import Type, Any
 from docx import Document
+from docx.styles.style import ParagraphStyle
+from docx.text.paragraph import Paragraph
 import GdocxHandler
 import GdocxParsing
 import GdocxStyle
@@ -14,9 +16,11 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.ImageHandler,
         GdocxHandler.ImageCaptionHandler,
         GdocxHandler.PageBreakHandler,
+        GdocxHandler.TableHandler,
+        GdocxHandler.TableCellHandler,
 ]
 
-# Document passed to ctor must outlive GdocxState
+# Document passed to ctor must outlive GdocxState.
 class GdocxState:
     NAME = "gdocx-state"
     STYLE = "paragraph"
@@ -26,6 +30,8 @@ class GdocxState:
         handlers: list[Type[Any]]
     ):
         self.doc = doc
+        # almost all handlers refer to state.receiver and not state.doc
+        self.receiver = GdocxStateReceiver(self)
         self.paragraph_lines = []
         self.current_style = doc.styles['Normal']
         self.registered_handlers = get_handler_dict(default_handlers + handlers)
@@ -84,17 +90,11 @@ class GdocxState:
     def process_header(self, line: str, info: GdocxParsing.LineInfo):
         self.doc.add_heading(GdocxParsing.get_header_string(line), 0)
 
-    def write_paragraph(self):
-        par_content = '\n'.join(self.paragraph_lines)
-        self.doc.add_paragraph(par_content, style = self.STYLE)
-
-    def flush_paragraph(self):
-        if len(self.paragraph_lines) != 0:
-            self.write_paragraph()
-            self.paragraph_lines = []
-
     def finalize(self):
-        self.flush_paragraph()
+        if len(self.paragraph_lines) != 0:
+            par_content = '\n'.join(self.paragraph_lines)
+            self.doc.add_paragraph(par_content, style = self.STYLE)
+            self.paragraph_lines = []
 
     def __enter__(self):
         return self
@@ -102,9 +102,22 @@ class GdocxState:
     def __exit__(self, exc_type, exc_value, traceback):
         self.finalize()
 
+
 def get_handler_dict(handlers: list[Type[Any]]):
     handler_dict = {}
     for handler in handlers:
         handler_dict[handler.NAME] = handler
     return handler_dict
 
+
+class GdocxStateReceiver:
+    NAME = "GdocxStateReceiver"
+
+    def __init__(self, state: GdocxState):
+        self.state = state
+
+    def add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph:
+        return self.state.doc.add_paragraph(text, style)
+
+    def get_paragraphs(self):
+        return self.state.doc.paragraphs
