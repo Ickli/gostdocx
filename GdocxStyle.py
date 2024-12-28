@@ -1,3 +1,4 @@
+import copy
 import json
 from docx.styles.style import BaseStyle, ParagraphStyle
 from docx.enum.text import WD_LINE_SPACING, WD_PARAGRAPH_ALIGNMENT
@@ -116,3 +117,27 @@ def parse_raw_font(style: BaseStyle, font_dict: dict[str, object]):
             style.font.color.rgb = RGBColor(value[0], value[1], value[2])
         else:
             setattr(style.font, name, value)
+
+DefaultStylesDoc = Document()
+
+def init_default_styles(filepath: str):
+    use_styles_from_file(filepath, DefaultStylesDoc)
+
+# Slightly rewritten code from https://stackoverflow.com/questions/78733174/how-can-i-use-styles-from-an-existing-docx-file-in-my-new-document
+#
+# Assumes 'sname' style is in src and is not in dest
+def copy_style(dest: Document, src: Document, sname: str):
+    src_style = src.styles[sname]
+    dest.styles.element.append(copy.copy(src_style.element))
+
+def copy_styles(dest: Document, src: Document):
+    src_stylenames = [st.name for st in src.styles]
+    dest_stylenames = [st.name for st in dest.styles]
+
+    for name in src_stylenames:
+        if name in dest_stylenames:
+            dest.styles[name].delete()
+        copy_style(dest, src, name)
+
+def use_default_styles(doc: Document):
+    copy_styles(doc, DefaultStylesDoc)

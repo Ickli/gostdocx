@@ -9,13 +9,13 @@ import GdocxStyle
 import GdocxCommon
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement, ns
+from docxcompose.composer import Composer
 
 PATH_DEFAULT_STYLES = "styles/default.json"
 SKIP_NUMBERING = False
 
 # ! You can add something here !
 # Will be added to GdocxState's registered_handlers
-# key: string, value: function(state: GdocxState, macro_args: list[str]) -> handler
 registered_macro_handlers: list[Type[Any]] = [
     GdocxHandler.EchoHandler
 ]
@@ -45,7 +45,12 @@ def process_with_current_handler(file, state: GdocxState):
 
             state.indent -= 1
             state.handler = old_handler
-        # this is for end macro
+
+            if state.reached_page_macro:
+                return
+
+        # this is for end macro.
+        # page macro is one-liner, so it ends immediately and we can return something
         if state.reached_macro_end:
             state.handler.finalize()
             state.reached_macro_end = False
@@ -82,22 +87,37 @@ def add_footer_with_page_number(doc: Document):
     add_page_number(doc.sections[0].footer.paragraphs[0].add_run())
     doc.sections[0].footer.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-def process_file(filepath: str, filepath_out: str):
+def process_txt(filepath: str, filepath_out: str):
     file = open(filepath, "r")
     doc = Document()
-    GdocxStyle.use_styles_from_file(PATH_DEFAULT_STYLES, doc)
+    GdocxStyle.use_default_styles(doc)
+    docs = []
 
-    with GdocxState(doc, registered_macro_handlers) as state:
-        state.strip_indent = GdocxParsing.STRIP_INDENT
-        state.skip_empty = GdocxParsing.SKIP_EMPTY
-        # here state is primary handler
-        process_with_current_handler(file, state)
+    while True:
+        with GdocxState(doc, registered_macro_handlers) as state:
+            state.strip_indent = GdocxParsing.STRIP_INDENT
+            state.skip_empty = GdocxParsing.SKIP_EMPTY
+            # here state is primary handler
+            process_with_current_handler(file, state)
+            to_append = state.reached_page_macro
+
+            docs.append(doc)
+            if to_append:
+                docs.append(Document(state.append_filepath))
+                doc = Document()
+                GdocxStyle.use_default_styles(doc)
+            else:
+                break
 
     file.close()
 
     if not SKIP_NUMBERING:
-        add_footer_with_page_number(doc)
-    doc.save(filepath_out)
+        add_footer_with_page_number(docs[0])
+
+    composer = Composer(docs[0])
+    for doc in docs[1:]:
+        composer.append(doc)
+    composer.save(filepath_out)
 
 def process_args() -> (str, str):
     inpath: str | None = None
@@ -148,5 +168,7 @@ Converts .txt files into .docx
     return (inpath, outpath)
 
 if __name__ == "__main__":
+    GdocxStyle.init_default_styles(PATH_DEFAULT_STYLES)
     inpath, outpath = process_args()
-    process_file(inpath, outpath)
+    process_txt(inpath, outpath)
+    print(f"\'{outpath}\' created")

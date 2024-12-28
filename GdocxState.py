@@ -18,6 +18,7 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.PageBreakHandler,
         GdocxHandler.TableHandler,
         GdocxHandler.TableCellHandler,
+        GdocxHandler.AppendPageHandler,
 ]
 
 # Document passed to ctor must outlive GdocxState.
@@ -41,6 +42,9 @@ class GdocxState:
         self.strip_indent = False
         self.skip_empty = False
         self.line_number = 0
+
+        self.reached_page_macro = False
+        self.append_filepath = ""
 
     # Returns new handler, if macro is encountered;
     # otherwise, returns None
