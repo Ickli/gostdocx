@@ -8,6 +8,12 @@ You can also easily add your own macros that can check, fix or stylize .docx par
 
 # Usage
 
+Install dependencies:
+```
+pip install python-docx
+pip install docxcompose
+```
+
 Create example .txt and .docx files:
 ```
 python3 example.py
