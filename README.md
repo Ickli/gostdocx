@@ -1,7 +1,19 @@
 # Description
 
-This script allows to convert markdown to DOCX, primarily targeting GOST 7.32 (ГОСТ, государственный стандарт, national standard).
-I've felt much pain in my back parts, because every WYSIWYG editor, except MS Word, is laggy and error prone.
+This script allows to convert .txt to .docx, primarily targeting GOST 7.32 (ГОСТ, государственный стандарт, national standard).
+The main goal is to use traditional text editors, such as vim, to produce .docx files. Thus, allowing more control over the end result without weird shenanigans of WYSIWYG editors, often inconsistent and error-prone programs.
 
-The main reason to use this tool is fast creation of DOCX files and making edits to it. Thanks to programmatic approach,
-you can easily extend the script and inject your own code.
+With style definition per each tag/macro, you can change document appearance in CSS-like manner. Each style is defined in .json.
+You can also easily add your own macros that can check, fix or stylize .docx paragraphs - for an example look into GdocxHandler.py.
+
+# Usage
+
+Create example .txt and .docx files:
+```
+python3 example.py
+```
+
+Process your .txt file:
+```
+python3 main.py -i YOUR_FILE.txt -o YOUR_OUTPUT.docx -s -se
+```
