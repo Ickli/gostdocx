@@ -68,6 +68,7 @@ class GdocxState:
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         # GdocxParsing.INFO_TYPE_MACRO is handled in caller 'handle_or_get_new_handler'
         self.paragraph_lines.append(info.line_stripped)
+        self.finalize()
 
     # Returns new handler or None
     def process_macro_line(self, 
