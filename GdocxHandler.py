@@ -4,8 +4,9 @@ import GdocxCommon
 import os.path
 from docx.shared import Cm
 from docx.table import _Cell
-from docx.styles.style import ParagraphStyle
+from docx.styles.style import ParagraphStyle, CharacterStyle
 from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 
 '''
 handler trait:
@@ -30,6 +31,8 @@ receiver trait:
     NAME: str
 
     add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph;
+
+    add_run(self, text: str = '', style: str | CharacterStyle | None = None) -> Run;
 
     get_paragraphs(self) -> list[docx.Paragraph]
 '''
@@ -249,6 +252,14 @@ class TableCellReceiver:
             return self.cell.paragraphs[0]
         return self.cell.add_paragraph(text, style)
 
+    def add_run(self, text: str = '', style: str | CharacterStyle | None = None) -> Run:
+        if not self.first_par_added:
+            run = self.cell.paragraphs[0].add_run(text, style)
+            self.first_par_added = True
+            return run
+        else:
+            return self.cell.paragraphs[-1].add_run(text, style)
+
     def get_paragraphs(self):
         return self.cell.paragraphs
 
@@ -331,3 +342,21 @@ class AppendPageHandler:
     def finalize(self):
         pass
 
+class RunStyleHandler:
+    NAME = "run-styled"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        if len(macro_args) == 0:
+            raise Exception(f"{self.NAME} macro needs at least 1 argument")
+
+        stylename = macro_args[0]
+        self.state = state
+        self.style = state.doc.styles[stylename]
+        self.run_lines = []
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        self.run_lines.append(info.line_stripped)
+
+    def finalize(self):
+        run_content = '\n'.join(self.run_lines)
+        self.state.receiver.add_run(run_content, self.style)

@@ -13,6 +13,7 @@ from docxcompose.composer import Composer
 
 PATH_DEFAULT_STYLES = "styles/default.json"
 SKIP_NUMBERING = False
+CONVERT_DOCX_TO_TXT = False
 
 # ! You can add something here !
 # Will be added to GdocxState's registered_handlers
@@ -119,9 +120,11 @@ def process_txt(filepath: str, filepath_out: str):
         composer.append(doc)
     composer.save(filepath_out)
 
+
 def process_args() -> (str, str):
     inpath: str | None = None
     outpath: str | None = None
+    docx_to_txt_outdir: str | None = None
 
     prs = argparse.ArgumentParser(prog = "GostDocx",
         description = '''
@@ -133,12 +136,14 @@ Converts .txt files into .docx
         formatter_class = argparse.RawTextHelpFormatter
     )
     prs.add_argument('-i', '--input', help="Path to source file", type=str)
-    prs.add_argument('-o', '--output', help="Path to output file", type=str)
+    prs.add_argument('-o', '--output', help="Path to output file, or outut file name in case -d flag is provided", type=str)
     prs.add_argument('-s', '--strip-indent', help="strip indents of nested macros", action="store_true")
     prs.add_argument('-se', '--skip-empty', help="skip empty lines", action="store_true")
     prs.add_argument('-il', '--indent-length', help="Length of indent sequence", type=int)
     prs.add_argument('-ic', '--indent-char', help="Indent character", type=str)
     prs.add_argument('-n', '--skip-numbering', help="Don't put page number in footers of pages", action="store_true")
+    prs.add_argument('-d', '--docx_to_txt', help="Convert .docx file .txt", action="store_true")
+    prs.add_argument('-od', '--docx_to_txt_outdir', help="If -d flag is provided, specifies output dir for style and output files", type=str)
 
     args = prs.parse_args()
     inpath = args.input
@@ -165,10 +170,24 @@ Converts .txt files into .docx
     GdocxParsing.SKIP_EMPTY = args.skip_empty
     SKIP_NUMBERING = args.skip_numbering
 
-    return (inpath, outpath)
+    CONVERT_DOCX_TO_TXT = args.docx_to_txt
+    if CONVERT_DOCX_TO_TXT:
+        od = args.docx_to_txt_outdir
+        if od is None:
+            print("ERROR: Must provide -od flag when -d flag is provided")
+            exit()
+        docx_to_txt_outdir = od
+
+    return (inpath, outpath, docx_to_txt_outdir)
 
 if __name__ == "__main__":
     GdocxStyle.init_default_styles(PATH_DEFAULT_STYLES)
-    inpath, outpath = process_args()
-    process_txt(inpath, outpath)
-    print(f"\'{outpath}\' created")
+    inpath, outpath, docx_to_txt_outdir = process_args()
+    if CONVERT_DOCX_TO_TXT:
+        process_txt(inpath, outpath)
+        print(f"\'{outpath}\' created")
+    else:
+        import GdocxToTxt
+        outname = outpath
+        GdocxToTxt.docx_to_txt(inpath, outname, docx_to_txt_outdir)
+        print(f"{docx_to_txt_outdir} dir, '{docx_to_txt_outdir}/{outname}', '{docx_to_txt_outdir}/styles.json' created")

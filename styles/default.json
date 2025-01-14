@@ -65,7 +65,7 @@
             "size": 14,
             "bold": true,
             "all_caps": true,
-            "color": [0, 0, 0]
+            "color": "000000"
         }
     },
     "heading-2": {
@@ -81,7 +81,7 @@
             "name": "Times New Roman",
             "size": 14,
             "bold": true,
-            "color": [0, 0, 0]
+            "color": "000000"
         }
     },
     "heading-1-non-toc": {

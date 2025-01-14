@@ -1,7 +1,8 @@
 from typing import Type, Any
 from docx import Document
-from docx.styles.style import ParagraphStyle
+from docx.styles.style import ParagraphStyle, CharacterStyle
 from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 import GdocxHandler
 import GdocxParsing
 import GdocxStyle
@@ -123,6 +124,9 @@ class GdocxStateReceiver:
 
     def add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph:
         return self.state.doc.add_paragraph(text, style)
+
+    def add_run(self, text: str = '', style: str | CharacterStyle | None = None) -> Run:
+        return self.get_paragraphs()[-1].add_run(text, style)
 
     def get_paragraphs(self):
         return self.state.doc.paragraphs

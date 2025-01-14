@@ -1,10 +1,12 @@
 import copy
 import json
-from docx.styles.style import BaseStyle, ParagraphStyle
-from docx.enum.text import WD_LINE_SPACING, WD_PARAGRAPH_ALIGNMENT
+import docx
+from docx.styles.style import BaseStyle, ParagraphStyle, CharacterStyle
+from docx.enum.text import WD_LINE_SPACING, WD_PARAGRAPH_ALIGNMENT, WD_COLOR_INDEX, WD_UNDERLINE
 from docx.enum.style import WD_STYLE_TYPE
-from docx.shared import Pt, Inches, Cm, RGBColor
+from docx.shared import Pt, Inches, Cm, RGBColor, Length
 from docx import Document
+from docx.text.run import Run, Font
 
 '''
 Guidelines for styles:
@@ -89,11 +91,16 @@ def parse_raw_styles(json_string: str, doc: Document):
         style = parse_raw_style(style_name, raw_style, doc)
 
 def parse_raw_style(style_name: str, json_dict: dict[str, object], doc: Document) -> BaseStyle:
-    if FIELD_IS_PAR not in json_dict or not json_dict[FIELD_IS_PAR]:
-        raise Exception(f"Not implemented: style {style_name}, can't process styles whose is_paragraph is not set to true")
+    if json_dict['is_paragraph']:
+        del json_dict[FIELD_IS_PAR]
+        style = parse_raw_par_style(style_name, json_dict, doc)
+    else:
+        del json_dict[FIELD_IS_PAR]
+        style = parse_raw_char_style(style_name, json_dict, doc)
+    return style
 
+def parse_raw_par_style(style_name: str, json_dict: dict[str, object], doc: Document) -> ParagraphStyle:
     style = create_default_par_style(style_name, doc)
-    del json_dict[FIELD_IS_PAR]
 
     for name in json_dict:
         value = json_dict[name]
@@ -107,14 +114,31 @@ def parse_raw_style(style_name: str, json_dict: dict[str, object], doc: Document
             setattr(style.paragraph_format, name, Cm(value))
         else:
             setattr(style.paragraph_format, name, value)
+    return style
+
+def parse_raw_char_style(style_name: str, json_dict: dict[str, object], doc: Document) -> BaseStyle:
+    for name in json_dict:
+        value = json_dict[name]
+        if name == "font":
+            parse_raw_font(style, value)
+        else:
+            raise Exception("Can't put in character style anything except 'font'")
 
 def parse_raw_font(style: BaseStyle, font_dict: dict[str, object]):
+    font = style.font
     for name in font_dict:
         value = font_dict[name]
         if name == "size":
-            style.font.size = Pt(value)
+            font.size = Pt(value)
         elif name == "color":
-            style.font.color.rgb = RGBColor(value[0], value[1], value[2])
+            font.color.rgb = RGBColor.from_string(value)
+        elif name == "highlight_color":
+            font.highlight_color = getattr(WD_COLOR_INDEX, value)
+        elif name == "underline":
+            if isinstance(value, bool):
+                font.underline = value
+            else:
+                font.underline = getattr(WD_UNDERLINE, value)
         else:
             setattr(style.font, name, value)
 
@@ -141,3 +165,106 @@ def copy_styles(dest: Document, src: Document):
 
 def use_default_styles(doc: Document):
     copy_styles(doc, DefaultStylesDoc)
+
+###############################   Serialization   ##############################
+
+def ser_par_align(style: ParagraphStyle) -> str:
+    svars = vars(docx.enum.text.WD_PARAGRAPH_ALIGNMENT)
+
+    for name in svars:
+        if not name.startswith('_') and svars[name] == style.paragraph_format.alignment:
+            return name
+    return None
+
+# I don't understand how paragraph styles' font correlate to run's font,
+# so i serialize both.
+def ser_font(font: Font) -> dict[str, any]:
+    jdict = {}
+    jdict['name'] = font.name
+    if font.size is not None:
+        jdict['size'] = font.size.pt
+    if font.all_caps is not None:
+        jdict['all_caps'] = font.all_caps
+    if font.bold is not None:
+        jdict['bold'] = font.bold
+    color = font.color.rgb;
+    if color is not None:
+        jdict['color'] = str(color)
+    if font.double_strike:
+        jdict['double_strike'] = font.double_strike
+    if font.highlight_color:
+        svars = vars(WD_COLOR_INDEX)
+        for name in svars:
+            if svars[name] == font.highlight_color:
+                jdict['highlight_color'] = name
+                break
+    if font.italic is not None:
+        jdict['italic'] = font.italic
+    if font.name is not None:
+        jdict['name'] = font.name
+    if font.strike is not None:
+        jdict['strike'] = font.strike
+    if font.subscript is not None:
+        jdict['subscript'] = font.subscript
+    if font.underline is not None:
+        ul = font.underline
+        if isinstance(ul, bool):
+            jdict['underline'] = ul
+        else:
+            svars = vars(WD_UNDERLINE)
+            for name in svars:
+                if svars[name] == ul:
+                    jdict['underline'] = name
+                    break
+    return jdict
+
+def ser_line_spacing(style: ParagraphStyle) -> Length | None | float:
+    lspacing = None
+    pformat = style.paragraph_format
+
+    if isinstance(pformat.line_spacing, Length):
+        lspacing = pformat.line_spacing.cm
+    elif isinstance(pformat.line_spacing, float):
+        lspacing = pformat.line_spacing
+    return lspacing
+
+# doesn't include name of style
+def ser_par_style(style: ParagraphStyle) -> dict[str, any]:
+    jdict = {}
+    pformat = style.paragraph_format
+
+    jdict[FIELD_IS_PAR] = True
+    if pformat.first_line_indent is not None:
+        jdict['first_line_indent'] = pformat.first_line_indent.cm
+    if pformat.left_indent is not None:
+        jdict['left_indent'] = pformat.left_indent.cm
+    if pformat.line_spacing is not None:
+        jdict['line_spacing'] = ser_line_spacing(style)
+    if pformat.space_before is not None:
+        jdict['space_before'] = pformat.space_before.cm
+    if pformat.space_after is not None:
+        jdict['space_after'] = pformat.space_after.cm
+    if style.base_style is not None:
+        jdict['base_style'] = style.base_style.name
+    try:
+        jdict['alignment'] = ser_par_align(style)
+    except:
+        pass
+    jdict['font'] = ser_font(style.font)
+
+    return jdict
+
+def ser_char_style(style: CharacterStyle, run: Run | None = None) -> dict[str, any]:
+    jdict = {}
+    jdict[FIELD_IS_PAR] = False
+    if style.font is not None:
+        jdict['font'] = ser_font(style.font)
+    if run is not None:
+        if not 'font' in jdict:
+            jdict['font'] = {}
+        fontdict = jdict['font']
+        if 'italic' not in fontdict and run.italic is not None:
+            fontdict['italic'] = run.italic
+        if 'bold' not in fontdict and run.bold is not None:
+            fontdict['bold'] = run.bold
+    return jdict
