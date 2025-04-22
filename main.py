@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 from docx import Document
@@ -11,6 +12,9 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement, ns
 from docxcompose.composer import Composer
 
+STARTUP_INPUT_DIR = "."
+# Relative path is resolved against the script's path,
+# as the default styles are intended to be in its directory.
 PATH_DEFAULT_STYLES = "styles/default.json"
 SKIP_NUMBERING = False
 CONVERT_DOCX_TO_TXT = False
@@ -18,7 +22,8 @@ CONVERT_DOCX_TO_TXT = False
 # ! You can add something here !
 # Will be added to GdocxState's registered_handlers
 registered_macro_handlers: list[Type[Any]] = [
-    GdocxHandler.EchoHandler
+    GdocxHandler.EchoHandler,
+    GdocxHandler.ChdirHandler,
 ]
 
 def process_with_current_handler(file, state: GdocxState):
@@ -144,12 +149,14 @@ Converts .txt files into .docx
     prs.add_argument('-n', '--skip-numbering', help="Don't put page number in footers of pages", action="store_true")
     prs.add_argument('-d', '--docx_to_txt', help="Convert .docx file .txt", action="store_true")
     prs.add_argument('-od', '--docx_to_txt_outdir', help="If -d flag is provided, specifies output dir for style and output files", type=str)
+    prs.add_argument('-id', '--input_dir', help="Program moves to specified directory before processing txt's. If not specified, uses current working dir. Paths passed via -i and -o are resolved before moving", type=str)
 
     args = prs.parse_args()
     inpath = args.input
     outpath = args.output
     il = args.indent_length
     ic = args.indent_char
+    input_dir = args.input_dir
 
     if ic == None:
         ic = GdocxParsing.INDENT_DEFAULT_CHAR
@@ -165,6 +172,9 @@ Converts .txt files into .docx
         print("ERROR: No output file is provided")
         prs.print_help()
         exit()
+    if input_dir is not None:
+        global STARTUP_INPUT_DIR
+        STARTUP_INPUT_DIR = GdocxCommon.AbsPath(input_dir)
 
     GdocxParsing.STRIP_INDENT = args.strip_indent
     GdocxParsing.SKIP_EMPTY = args.skip_empty
@@ -181,12 +191,28 @@ Converts .txt files into .docx
     return (inpath, outpath, docx_to_txt_outdir)
 
 if __name__ == "__main__":
-    GdocxStyle.init_default_styles(PATH_DEFAULT_STYLES)
     inpath, outpath, docx_to_txt_outdir = process_args()
-    if CONVERT_DOCX_TO_TXT:
+
+    # resolve abs paths before switching to STARTUP_INPUT_DIR
+    inpath = GdocxCommon.AbsPath(inpath)
+    outpath = GdocxCommon.AbsPath(outpath)
+
+    # init default styles, which is in a sibling file to the script
+    absScriptPath = os.path.dirname(os.path.realpath(__file__))
+    absDefaultStylesPath = os.path.join(absScriptPath, PATH_DEFAULT_STYLES)
+    GdocxStyle.init_default_styles(absDefaultStylesPath)
+
+    # if was specified in args, change to it.
+    # otherwise, just stays in the directory of the caller
+    os.chdir(STARTUP_INPUT_DIR)
+
+    if not CONVERT_DOCX_TO_TXT:
         process_txt(inpath, outpath)
         print(f"\'{outpath}\' created")
     else:
+        print("DOCX_TO_TXT feature is not yet implemented")
+        os.exit(1)
+
         import GdocxToTxt
         outname = outpath
         GdocxToTxt.docx_to_txt(inpath, outname, docx_to_txt_outdir)

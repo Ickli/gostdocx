@@ -1,3 +1,4 @@
+import os
 
 class GdocxWarning:
     FMT = "WARNING: line %d: %s"
@@ -8,3 +9,6 @@ class GdocxWarning:
         return self.string
 
 Warnings: list[GdocxWarning] = []
+
+def AbsPath(path):
+    return os.path.join(os.getcwd(), path)

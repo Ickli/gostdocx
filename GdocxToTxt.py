@@ -9,17 +9,37 @@ import docx2txt
 import json
 import os
 
-class DefaultStyle:
-    par = "paragraph"
-    # When using default styling, separate run styles are ignored
-    # run = "paragraph"
-    image_par = "image-paragraph"
-    
+USE_DEFAULT_STYLES = False
+
+DSTYLE_PARAGRAPH = 0
+DSTYLE_HEADING1 = 1
+DSTYLE_HEADING2 = 2
+
+DSTYLES = {
+    DSTYLE_PARAGRAPH: "paragraph",
+    DSTYLE_HEADING1: "Heading 1",
+    DSTYLE_HEADING2: "Heading 2",
+}
+
+def get_default_style(style: BaseStyle) -> int:
+    if style.name == "Normal" or style.base_style.name == "Normal":
+        return DSTYLE_PARAGRAPH
+    if style.name == "Heading 1" or style.base_style.name == "Heading 1":
+        return DSTYLE_HEADING1
+    if style.name == "Heading 2" or style.base_style.name == "Heading 2":
+        return DSTYLE_HEADING2
+    return DSTYLE_PARAGRAPH
 
 _FreeStyleIndex = 0
 # returns hash of style, contained in style_hashes
 # dict contains: keys = hashes of styles, values = pair of style name and style serialized into dict
 def get_or_create_style(style: BaseStyle, style_hashes: dict[int, (str, dict[str, any])], run: Run | None = None) -> int:
+    if USE_DEFAULT_STYLES:
+        return get_default_style(style)
+    else:
+        return get_or_create_style_(style, style_hashes, run)
+
+def get_or_create_style_(style: BaseStyle, style_hashes: dict[int, (str, dict[str, any])], run: Run | None = None) -> int:
     global _FreeStyleIndex
 
     jsonstr = ""
@@ -70,6 +90,9 @@ def macro_str_from_image_path(path: str) -> str:
     # TODO
     return f"(img {_qt}{path}{_qt}){_nl}"
 
+def macro_str_page_break() -> str:
+    return "(page-break)\n"
+
 def extract_images(docpath: str, dirpath: str):
     docx2txt.process(docpath, dirpath)
 
@@ -78,6 +101,7 @@ def docx_to_txt(docpath: str, outfilename: str, outdirpath: str):
     outdirpath = Path(outdirpath)
 
     outdirpath.mkdir(parents=True, exist_ok=True)
+    extract_images(docpath, outdirpath)
 
     outstr = ""
 
@@ -90,6 +114,9 @@ def docx_to_txt(docpath: str, outfilename: str, outdirpath: str):
         if isinstance(doc_elem, Paragraph):
             par = doc_elem
             outstr += macro_str_par_open(doc_elem, style_hashes)
+
+            if doc_elem.style.paragraph_format.page_break_before:
+                outstr += macro_str_page_break()
             
             for run in par.iter_inner_content():
                 if not isinstance(run, Run):
@@ -101,7 +128,8 @@ def docx_to_txt(docpath: str, outfilename: str, outdirpath: str):
                     elif isinstance(run_elem, str):
                         outstr += macro_str_from_run(run, run_elem, style_hashes)
                     else: # Drawing
-                        img_name = run_elem._inline.graphic.graphicData.pic.nvPicPr.cNvPr.name
+                        print(vars(run_elem._element))
+                        img_name = run_elem._element._inline.graphic.graphicData.pic.nvPicPr.cNvPr.name
                         print("about to acess image:", img_name, outdirpath / img_name)
                         outstr += macro_str_from_image_path(outdirpath/img_name)
 

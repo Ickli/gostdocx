@@ -51,6 +51,22 @@ class EchoHandler:
     def finalize(self):
         pass
 
+class ChdirHandler:
+    NAME = "chdir"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        self.ddir = macro_args[0]
+        pass
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        import os
+        print(f"Changing dir to {self.ddir}");
+        os.chdir(self.ddir)
+        pass
+
 class PageBreakHandler:
     NAME = "page-break"
 
@@ -328,7 +344,7 @@ class AppendPageHandler:
         if len(macro_args) == 0:
             raise Exception(f"{self.NAME} macro needs at least 1 argument")
 
-        path = macro_args[0]
+        path = GdocxCommon.AbsPath(macro_args[0])
         if not os.path.isfile(path):
             raise Exception(f"{path} is not a file. You must pass a file path to {self.NAME} macro")
 
