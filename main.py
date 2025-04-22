@@ -18,6 +18,7 @@ STARTUP_INPUT_DIR = "."
 PATH_DEFAULT_STYLES = "styles/default.json"
 SKIP_NUMBERING = False
 CONVERT_DOCX_TO_TXT = False
+DOCX_TO_TXT_OUTDIR = "."
 
 # ! You can add something here !
 # Will be added to GdocxState's registered_handlers
@@ -154,9 +155,24 @@ Converts .txt files into .docx
     args = prs.parse_args()
     inpath = args.input
     outpath = args.output
-    il = args.indent_length
-    ic = args.indent_char
-    input_dir = args.input_dir
+
+    init_gostdocx(
+        indent_length = args.indent_length,
+        indent_char = args.indent_char,
+        input_dir = args.input_dir,
+        strip_indent = args.strip_indent,
+        skip_empty = args.skip_empty,
+        skip_numbering = args.skip_numbering,
+        docx_to_txt_outdir = args.docx_to_txt_outdir,
+        docx_to_txt = args.docx_to_txt
+    )
+
+    return (inpath, outpath)
+
+def init_gostdocx(**kwargs):
+    il = kwargs.get('indent_length')
+    ic = kwargs.get('indent_char')
+    input_dir = kwargs.get('input_dir')
 
     if ic == None:
         ic = GdocxParsing.INDENT_DEFAULT_CHAR
@@ -164,34 +180,26 @@ Converts .txt files into .docx
         il = GdocxParsing.INDENT_DEFAULT_LENGTH
     GdocxParsing.INDENT_STRING = ic * il
     
-    if inpath is None:
-        print("ERROR: No input file is provided")
-        prs.print_help()
-        exit()
-    if outpath is None:
-        print("ERROR: No output file is provided")
-        prs.print_help()
-        exit()
     if input_dir is not None:
         global STARTUP_INPUT_DIR
         STARTUP_INPUT_DIR = GdocxCommon.AbsPath(input_dir)
 
-    GdocxParsing.STRIP_INDENT = args.strip_indent
-    GdocxParsing.SKIP_EMPTY = args.skip_empty
-    SKIP_NUMBERING = args.skip_numbering
+    GdocxParsing.STRIP_INDENT = kwargs.get('strip_indent')
+    GdocxParsing.SKIP_EMPTY = kwargs.get('skip_empty')
+    SKIP_NUMBERING = kwargs.get('skip_numbering')
 
-    CONVERT_DOCX_TO_TXT = args.docx_to_txt
+    CONVERT_DOCX_TO_TXT = kwargs.get('docx_to_txt')
     if CONVERT_DOCX_TO_TXT:
-        od = args.docx_to_txt_outdir
+        od = kwargs.get('docx_to_txt_outdir')
         if od is None:
             print("ERROR: Must provide -od flag when -d flag is provided")
             exit()
-        docx_to_txt_outdir = od
+        global DOCX_TO_TXT_OUTDIR 
+        DOCX_TO_TXT_OUTDIR = od
 
-    return (inpath, outpath, docx_to_txt_outdir)
 
 if __name__ == "__main__":
-    inpath, outpath, docx_to_txt_outdir = process_args()
+    inpath, outpath = process_args()
 
     # resolve abs paths before switching to STARTUP_INPUT_DIR
     inpath = GdocxCommon.AbsPath(inpath)
@@ -215,5 +223,5 @@ if __name__ == "__main__":
 
         import GdocxToTxt
         outname = outpath
-        GdocxToTxt.docx_to_txt(inpath, outname, docx_to_txt_outdir)
+        GdocxToTxt.docx_to_txt(inpath, outname, DOCX_TO_TXT_OUTDIR)
         print(f"{docx_to_txt_outdir} dir, '{docx_to_txt_outdir}/{outname}', '{docx_to_txt_outdir}/styles.json' created")
