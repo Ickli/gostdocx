@@ -1,3 +1,10 @@
+'''
+You can use the script as... a script. An example is in example.py and README.
+
+Also, use it as a library! Just use init_gostdocx(**kwargs) to pass arguments
+to the module (as if through command line) and then process_txt(inpath, outpath)
+'''
+
 import os
 import sys
 import argparse
