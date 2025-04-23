@@ -163,6 +163,13 @@ Converts .txt files into .docx
     inpath = args.input
     outpath = args.output
 
+    if inpath == None:
+        print("ERROR: must provide path to in file .txt")
+        exit(1)
+    elif outpath == None:
+        print("ERROR: must provide path to out file .docx")
+        exit(1)
+
     init_gostdocx(
         indent_length = args.indent_length,
         indent_char = args.indent_char,
@@ -226,7 +233,7 @@ if __name__ == "__main__":
         print(f"\'{outpath}\' created")
     else:
         print("DOCX_TO_TXT feature is not yet implemented")
-        os.exit(1)
+        exit(1)
 
         import GdocxToTxt
         outname = outpath
