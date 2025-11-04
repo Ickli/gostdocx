@@ -445,3 +445,32 @@ class JsonFieldHandler:
 
         recv.add_run(
             str(recv.jsonhandler.get_json_field(self.fieldname)))
+
+
+class NextImageNumberAsRunHandler:
+    NAME = "next-image-number-as-run"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        self.state = state
+        pass
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        self.state.receiver.add_run(str(ImageCaptionHandler.ItemFreeNumber))
+        pass
+
+class ImageNumberAsRunHandler:
+    NAME = "image-number-as-run"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        self.state = state
+        pass
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        self.state.receiver.add_run(str(ImageCaptionHandler.ItemFreeNumber - 1))
+        pass
