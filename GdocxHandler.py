@@ -2,6 +2,7 @@ import GdocxParsing
 import GdocxStyle
 import GdocxCommon
 import os.path
+import json
 from docx.shared import Cm
 from docx.table import _Cell
 from docx.styles.style import ParagraphStyle, CharacterStyle
@@ -234,8 +235,8 @@ class ImageCaptionHandler:
         self.paragraph_lines = []
         self.is_first_line_processed = False
 
-        self.item_number = self.ItemFreeNumber
-        self.ItemFreeNumber += 1
+        self.item_number = ImageCaptionHandler.ItemFreeNumber
+        ImageCaptionHandler.ItemFreeNumber += 1
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         line_stripped = info.line_stripped
@@ -376,3 +377,71 @@ class RunStyleHandler:
     def finalize(self):
         run_content = '\n'.join(self.run_lines)
         self.state.receiver.add_run(run_content, self.style)
+
+class JsonReaderHandler:
+    NAME = "json-reader"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        if len(macro_args) == 0:
+            raise Exception(f"{self.NAME} macro needs at least 1 argument")
+
+        self.state = state
+        self.jsonname = macro_args[0]
+        
+        jsonfile = open(self.jsonname, 'r')
+        self.json = json.loads(jsonfile.read())
+        self.prev_receiver = self.state.receiver
+        self.state.receiver = JsonReaderReceiver(self)
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"{self.NAME} does not accept free-standing text inside")
+
+    def finalize(self):
+        self.state.receiver = self.prev_receiver
+
+    def get_json_field(self, fieldname):
+        return self.json[fieldname]
+
+
+# This class is purely for restraining json-field, so that it knows
+# to which receiver it is going to send text
+class JsonReaderReceiver:
+    NAME = "JsonReaderReceiver"
+
+    def __init__(self, jsonhandler: 'JsonReaderHandler'):
+        self.jsonhandler = jsonhandler
+        pass
+
+    def add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph:
+        return self.jsonhandler.prev_receiver.add_paragraph(text, style)
+
+    def add_run(self, text: str = '', style: str | CharacterStyle | None = None) -> Run:
+        return self.jsonhandler.prev_receiver.add_run(text, style)
+
+    def get_paragraphs(self):
+        return self.jsonhandler.prev_receiver.get_paragraphs()
+
+
+class JsonFieldHandler:
+    NAME = "json-field"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        if len(macro_args) == 0:
+            raise Exception(f"{self.NAME} macro needs at least 1 argument")
+        if not isinstance(state.receiver, JsonReaderReceiver):
+            raise Exception("{self.NAME} can only be used inside {JsonReaderHandler.NAME}")
+
+        self.state = state
+        self.fieldname = macro_args[0]
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"{self.NAME} does not accept free-standing text inside")
+
+    def finalize(self):
+        recv = self.state.receiver
+
+        if len(recv.get_paragraphs()) == 0:
+            raise Exception(f"Before {self.NAME} insert at least one {ParStyleHandler.NAME} so that it's possible to attach the field's value to it")
+
+        recv.add_run(
+            str(recv.jsonhandler.get_json_field(self.fieldname)))

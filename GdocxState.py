@@ -20,6 +20,8 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.TableHandler,
         GdocxHandler.TableCellHandler,
         GdocxHandler.AppendPageHandler,
+        GdocxHandler.JsonReaderHandler,
+        GdocxHandler.JsonFieldHandler,
 ]
 
 # Document passed to ctor must outlive GdocxState.
