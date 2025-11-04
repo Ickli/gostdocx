@@ -363,12 +363,11 @@ class RunStyleHandler:
     NAME = "run-styled"
 
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
-        if len(macro_args) == 0:
-            raise Exception(f"{self.NAME} macro needs at least 1 argument")
-
-        stylename = macro_args[0]
         self.state = state
-        self.style = state.doc.styles[stylename]
+        if len(macro_args) > 0:
+            self.style = state.doc.styles[macro_args[0]]
+        else:
+            self.style = None
         self.run_lines = []
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
@@ -474,3 +473,20 @@ class ImageNumberAsRunHandler:
     def finalize(self):
         self.state.receiver.add_run(str(ImageCaptionHandler.ItemFreeNumber - 1))
         pass
+
+class SpaceHandler:
+    NAME = "space"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        self.state = state
+        if len(macro_args) > 0:
+            self.count = int(macro_args[0])
+        else:
+            self.count = 1
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        run_content = ' ' * self.count
+        self.state.receiver.add_run(run_content)
