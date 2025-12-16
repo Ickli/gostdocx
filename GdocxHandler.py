@@ -552,9 +552,7 @@ class NumberedReceiver:
         for i in range(len(self.in_macro_names)):
             if i == len(NumberedReceiver.PREV_IN_MACRO_NAMES):
                 first_unmatched_index = i
-                print('overflow', i, NumberedReceiver.PREV_IN_MACRO_NAMES)
                 break
-            print('eq?', self.in_macro_names[i], NumberedReceiver.PREV_IN_MACRO_NAMES[i])
             if self.in_macro_names[i] != NumberedReceiver.PREV_IN_MACRO_NAMES[i]:
                 first_unmatched_index = i
                 break
@@ -589,12 +587,9 @@ class NumberedReceiver:
                 " You must not put contents in such a macro")
 
         prefix = None
-        print('start dispatch', self.in_macro_names)
         if len(self.in_macro_names) == 0:
-            print("aaa")
             curhandler = self.numbered_handler.state.current_macro_name
             prefix = NumberedReceiver.construct_prefix([curhandler])
-            print('assigning', curhandler)
             NumberedReceiver.PREV_IN_MACRO_NAMES = [curhandler]
         else:
             prefix = NumberedReceiver.construct_prefix(self.in_macro_names)
@@ -608,7 +603,6 @@ class NumberedReceiver:
             dic[name] = self.START_NUMBER
 
     def set_empty_dicts_at(self, start, end):
-        print("setting empty at", start, end)
         for i in range(start, end):
             if i == len(NumberedReceiver.NUMBER_DICTS):
                 NumberedReceiver.NUMBER_DICTS.append({})
