@@ -141,7 +141,10 @@ class LoadStyleHandler:
     def __init__(self, state: 'GdocxState', macro_args: list[str]):
         if len(macro_args) == 0:
             raise Exception("ParseStyleDirective macro must contain path to file")
-        GdocxStyle.use_styles_from_file(macro_args[0], state.doc)
+        to_override = False
+        if len(macro_args) > 1:
+            to_override = bool(macro_args[1])
+        GdocxStyle.use_styles_from_file(macro_args[0], state.doc, to_override)
 
     def process_line(self, line: str, info: GdocxParsing.LineInfo):
         raise Exception("You must not place content inside ParseStyleDirective")
@@ -315,8 +318,8 @@ class TableCellHandler:
         row = int(macro_args[0])
         col = int(macro_args[1])
 
-        rowindex = row - 1
-        colindex = col - 1
+        rowindex = row
+        colindex = col
 
         if rowindex >= self.table.rows or rowindex < 0:
             raise Exception(f"{self.NAME} row (= {row}) number must be between 1 and {self.table.rows - 1} inclusive")
@@ -332,10 +335,9 @@ class TableCellHandler:
         self.paragraph_lines.append(info.line_stripped)
 
     def finalize(self):
-        if len(self.paragraph_lines) == 0:
-            return
-        par_content = '\n'.join(self.paragraph_lines)
-        self.state.receiver.add_paragraph(par_content, style = self.STYLE)
+        if len(self.paragraph_lines) != 0:
+            par_content = '\n'.join(self.paragraph_lines)
+            self.state.receiver.add_paragraph(par_content, style = self.STYLE)
         self.state.receiver = self.prev_receiver
 
 class AppendPageHandler:
@@ -490,3 +492,153 @@ class SpaceHandler:
     def finalize(self):
         run_content = ' ' * self.count
         self.state.receiver.add_run(run_content)
+
+# Dispatches based on current macro.
+# Accepts only args in format [(True macro_name|label)|(False macro_name|label ...)]
+class NumberedHandler:
+    NAME = "numbered"
+
+    def __init__(self, state: 'GdocxState', macro_args: list[str]):
+        self.state = state
+        self.is_in_erasing_state = False
+        self.in_macro_names = []
+
+        if len(macro_args) > 1:
+            if macro_args[0] == "True":
+                self.is_in_erasing_state = True
+                if len(macro_args) != 2:
+                    raise ValueError(f"{self.NAME} if 1'st arg == True, "
+                        "the 2nd (macro_name) must be provided. Do not provide"
+                        " any more args.")
+                self.in_macro_names.append(macro_args[1])
+
+            elif macro_args[0] == "False":
+                self.in_macro_names = macro_args[1:]
+
+        self.prev_receiver = self.state.receiver
+        self.state.receiver = NumberedReceiver(self)
+
+    def process_line(self, line: str, info: GdocxParsing.LineInfo):
+        raise Exception(f"You must not place content inside {self.NAME}")
+
+    def finalize(self):
+        if self.is_in_erasing_state:
+            self.state.receiver.erase_macro_name(self.in_macro_names[0])
+            self.state.receiver = self.prev_receiver
+            return
+
+        # account these macro names to nullify previous 'work' if it doesn't
+        # uphold later in NumberedReceiver
+        # self.state.receiver.PREV_IN_MACRO_NAMES = self.in_macro_names
+        self.state.receiver = self.prev_receiver
+
+class NumberedReceiver:
+    NAME = "NumberedReceiver"
+    START_NUMBER = 1
+
+    NUMBER_DICTS = []
+    PREV_IN_MACRO_NAMES = []
+
+    def __init__(self, numbered_handler: 'NumberedHandler'):
+        self.has_run = False
+        self.numbered_handler = numbered_handler
+        self.in_macro_names = self.numbered_handler.in_macro_names
+
+        first_unmatched_index = None
+
+        if len(self.in_macro_names) == 0 and len(NumberedReceiver.NUMBER_DICTS) == 0:
+            self.set_empty_dicts_at(0, 1)
+
+        for i in range(len(self.in_macro_names)):
+            if i == len(NumberedReceiver.PREV_IN_MACRO_NAMES):
+                first_unmatched_index = i
+                print('overflow', i, NumberedReceiver.PREV_IN_MACRO_NAMES)
+                break
+            print('eq?', self.in_macro_names[i], NumberedReceiver.PREV_IN_MACRO_NAMES[i])
+            if self.in_macro_names[i] != NumberedReceiver.PREV_IN_MACRO_NAMES[i]:
+                first_unmatched_index = i
+                break
+
+        if first_unmatched_index is None:
+            return
+
+        new_number_dicts_len = max(
+            len(NumberedReceiver.NUMBER_DICTS), len(self.in_macro_names))
+        self.set_empty_dicts_at(first_unmatched_index, new_number_dicts_len)
+
+
+    def add_paragraph(self, text: str = '', style: str | ParagraphStyle | None = None) -> Paragraph:
+        if self.has_run:
+            raise ValueError(f"{self.NAME} is supporting only 1 macro inside")
+
+        self.has_run = True
+        text = self.dispatch_on_name_and_transform(text)
+        return self.numbered_handler.prev_receiver.add_paragraph(text, style)
+
+    def add_run(self, text: str = '', style: str | CharacterStyle | None = None) -> Run:
+        return self.numbered_handler.prev_receiver.add_run(text, style)
+
+    def get_paragraphs(self):
+        return self.numbered_handler.prev_receiver.get_paragraphs()
+    
+    def dispatch_on_name_and_transform(self, text: str):
+        if self.numbered_handler.is_in_erasing_state:
+            raise ValueError(f"{self.numbered_handler.NAME} is in erasing state."
+                "It means, that it is created just for zero-ing out a number"
+                " for some macro-name|label."
+                " You must not put contents in such a macro")
+
+        prefix = None
+        print('start dispatch', self.in_macro_names)
+        if len(self.in_macro_names) == 0:
+            print("aaa")
+            curhandler = self.numbered_handler.state.current_macro_name
+            prefix = NumberedReceiver.construct_prefix([curhandler])
+            print('assigning', curhandler)
+            NumberedReceiver.PREV_IN_MACRO_NAMES = [curhandler]
+        else:
+            prefix = NumberedReceiver.construct_prefix(self.in_macro_names)
+            NumberedReceiver.PREV_IN_MACRO_NAMES = self.in_macro_names
+
+        return prefix + " " + text
+
+
+    def erase_macro_name(self, name):
+        for dic in NumberedReceiver.NUMBER_DICTS:
+            dic[name] = self.START_NUMBER
+
+    def set_empty_dicts_at(self, start, end):
+        print("setting empty at", start, end)
+        for i in range(start, end):
+            if i == len(NumberedReceiver.NUMBER_DICTS):
+                NumberedReceiver.NUMBER_DICTS.append({})
+            else:
+                NumberedReceiver.NUMBER_DICTS[i] = {}
+
+    @classmethod
+    def construct_prefix(cls, macro_names):
+        assert(len(macro_names) > 0)
+        assert(len(macro_names) <= len(cls.NUMBER_DICTS))
+
+        res = ""
+        for i in range(len(macro_names) - 1):
+            macro_name = macro_names[i]
+            dic = cls.NUMBER_DICTS[i]
+            num = dic.get(macro_name)
+            if num is None:
+                num = cls.START_NUMBER
+                dic[macro_name] = cls.START_NUMBER
+            num -= 1
+            res += str(num)
+            res += "."
+
+        macro_name = macro_names[-1]
+        dic = cls.NUMBER_DICTS[len(macro_names) - 1]
+        num = dic.get(macro_name)
+        if num is None:
+            num = dic[macro_name] = cls.START_NUMBER
+        dic[macro_name] += 1
+
+        res += str(num)
+
+        return res

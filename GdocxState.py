@@ -1,3 +1,4 @@
+import traceback
 from typing import Type, Any
 from docx import Document
 from docx.styles.style import ParagraphStyle, CharacterStyle
@@ -26,6 +27,7 @@ default_handlers: list[Type[Any]] = [
         GdocxHandler.ImageNumberAsRunHandler,
         GdocxHandler.NextImageNumberAsRunHandler,
         GdocxHandler.SpaceHandler,
+        GdocxHandler.NumberedHandler,
 ]
 
 # Document passed to ctor must outlive GdocxState.
@@ -53,6 +55,8 @@ class GdocxState:
         self.reached_page_macro = False
         self.append_filepath = ""
 
+        self.current_macro_name = None
+
     # Returns new handler, if macro is encountered;
     # otherwise, returns None
     def handle_or_get_new_handler(self,
@@ -63,12 +67,17 @@ class GdocxState:
 
         rawline, info = GdocxParsing.parse_line(line, indent)
 
-        if info.is_empty and self.skip_empty:
-            return None
-        if info.type == GdocxParsing.INFO_TYPE_MACRO:
-            return self.process_macro_line(rawline, info)
-        elif info.type != GdocxParsing.INFO_TYPE_COMMENT:
-            self.handler.process_line(rawline, info)
+        try:
+            if info.is_empty and self.skip_empty:
+                return None
+            if info.type == GdocxParsing.INFO_TYPE_MACRO:
+                return self.process_macro_line(rawline, info)
+            elif info.type != GdocxParsing.INFO_TYPE_COMMENT:
+                self.handler.process_line(rawline, info)
+        except Exception as e:
+            traceback.print_exc()
+            print(f"ERROR, line {self.line_number}: {e}")
+            exit(1)
 
         return None
 
@@ -85,15 +94,21 @@ class GdocxState:
         macro_type = GdocxParsing.get_macro_type(info.line_stripped)
         new_handler = None
 
-        if macro_type == GdocxParsing.MACRO_TYPE_START or macro_type == GdocxParsing.MACRO_TYPE_ONE_LINE:
-            args = GdocxParsing.parse_macro_args(info.line_stripped)
-            if len(args) == 0:
-                raise Exception("Empty macro")
-            macro_name = args[0]
-            if macro_name not in self.registered_handlers:
-                raise Exception("Couldn't find macro: %s" % macro_name)
-            else:
-                new_handler = self.registered_handlers[macro_name](self, args[1:])
+        try:
+            if macro_type == GdocxParsing.MACRO_TYPE_START or macro_type == GdocxParsing.MACRO_TYPE_ONE_LINE:
+                args = GdocxParsing.parse_macro_args(info.line_stripped)
+                if len(args) == 0:
+                    raise Exception("Empty macro")
+                macro_name = args[0]
+                if macro_name not in self.registered_handlers:
+                    raise Exception("Couldn't find macro: %s" % macro_name)
+                else:
+                    self.current_macro_name = macro_name
+                    new_handler = self.registered_handlers[macro_name](self, args[1:])
+        except Exception as e:
+            traceback.print_exc()
+            print(f"ERROR, line {self.line_number}: {e}")
+            exit(1)
 
         self.reached_macro_end = (macro_type == GdocxParsing.MACRO_TYPE_END or macro_type == GdocxParsing.MACRO_TYPE_ONE_LINE)
 

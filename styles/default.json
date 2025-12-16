@@ -12,6 +12,19 @@
             "size": 14
         }
     },
+    "code": {
+        "is_paragraph": true,
+        "first_line_indent": 0,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "LEFT",
+        "font": {
+            "name": "Courier new",
+            "size": 14
+        }
+    },
     "list": {
         "is_paragraph": true,
         "first_line_indent": 1.25,
@@ -77,6 +90,22 @@
         "space_after": 0,
         "alignment": "JUSTIFY",
         "base_style": "Heading 2",
+        "font": {
+            "name": "Times New Roman",
+            "size": 14,
+            "bold": true,
+            "color": "000000"
+        }
+    },
+    "heading-3": {
+        "is_paragraph": true,
+        "first_line_indent": 1.25,
+        "left_indent": 0,
+        "line_spacing": 1.5,
+        "space_before": 0,
+        "space_after": 0,
+        "alignment": "JUSTIFY",
+        "base_style": "Heading 3",
         "font": {
             "name": "Times New Roman",
             "size": 14,

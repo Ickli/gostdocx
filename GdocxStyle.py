@@ -67,12 +67,12 @@ def create_default_par_style(style_name: str, doc: Document) -> ParagraphStyle:
     fmt.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
     return style
 
-def use_styles_from_file(filepath: str, doc: Document):
+def use_styles_from_file(filepath: str, doc: Document, to_override: bool = False):
     file = open(filepath, "r")
     json_string = file.read()
-    parse_raw_styles(json_string, doc)
+    parse_raw_styles(json_string, doc, to_override)
 
-def parse_raw_styles(json_string: str, doc: Document):
+def parse_raw_styles(json_string: str, doc: Document, to_override: bool):
     raw_styles = json.loads(json_string)
 
     for style_name in raw_styles:
@@ -85,7 +85,7 @@ def parse_raw_styles(json_string: str, doc: Document):
         if style_name == FIELD_IMAGE_CAPTION_INFIX:
             Style.IMAGE_CAPTION_INFIX = raw_styles[style_name]
             continue
-        if style_name in doc.styles:
+        if style_name in doc.styles and not to_override:
             raise Exception(f"Style {style_name} encountered twice")
         raw_style = raw_styles[style_name]
         style = parse_raw_style(style_name, raw_style, doc)
@@ -100,7 +100,11 @@ def parse_raw_style(style_name: str, json_dict: dict[str, object], doc: Document
     return style
 
 def parse_raw_par_style(style_name: str, json_dict: dict[str, object], doc: Document) -> ParagraphStyle:
-    style = create_default_par_style(style_name, doc)
+    style = None
+    try:
+        style = doc.styles[style_name]
+    except KeyError as e:
+        style = create_default_par_style(style_name, doc)
 
     for name in json_dict:
         value = json_dict[name]
